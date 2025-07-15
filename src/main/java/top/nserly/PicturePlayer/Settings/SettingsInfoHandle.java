@@ -60,7 +60,7 @@ public class SettingsInfoHandle {
         }
     }
 
-    //获取某建的对应布尔值
+    //获取某键的对应布尔值
     public static boolean getBoolean(String Description, Map map) {
         if (map == null || !map.containsKey(Description)) {
             if (DefaultData.containsKey(Description)) return Boolean.parseBoolean(DefaultData.get(Description));
@@ -69,11 +69,19 @@ public class SettingsInfoHandle {
         return Boolean.parseBoolean(map.get(Description).toString().trim().toLowerCase());
     }
 
-    //获取某建的对应浮点值
+    //获取某键的对应浮点值
     public static double getDouble(String Description, Map map) {
         return getDouble(Description, map, -65, 150);
     }
 
+    //获取某键的对应int值
+    public static int getInt(String Description, Map map) {
+        if (map == null || !map.containsKey(Description)) {
+            if (DefaultData.containsKey(Description)) return Integer.parseInt(DefaultData.get(Description));
+            return -1;
+        }
+        return Integer.parseInt(map.get(Description).toString().trim().toLowerCase());
+    }
 
     //获取某建的对应布尔值
     private static double getDouble(String Description, Map map, double min, double max) {

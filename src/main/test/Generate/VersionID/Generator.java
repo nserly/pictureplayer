@@ -21,8 +21,8 @@ public class Generator {
 
 
         HashMap<String, String> SpecialFields = new HashMap<>();
-        SpecialFields.put("version", "V1.0.0beta14");
-        SpecialFields.put("versionID", "1305");
+        SpecialFields.put("version", "V1.0.0beta15");
+        SpecialFields.put("versionID", "1315");
         SpecialFields.put("MDWebsite", "https://gitee.com/nserly-huaer/ImagePlayer/raw/master/artifacts/PicturePlayer_jar/");
         SpecialFields.put("LibWebsite", "https://gitee.com/nserly-huaer/ImagePlayer/raw/master/artifacts/PicturePlayer_jar/lib/");
 

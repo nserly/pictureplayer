@@ -31,15 +31,6 @@
             </properties>
             <border type="none"/>
             <children>
-              <component id="83418" class="javax.swing.JLabel" binding="VersionView">
-                <constraints>
-                  <grid row="1" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="6" fill="0" indent="0" use-parent-layout="false"/>
-                </constraints>
-                <properties>
-                  <requestFocusEnabled value="false"/>
-                  <text value="Version:"/>
-                </properties>
-              </component>
               <component id="8639c" class="javax.swing.JTextField" binding="textField1" default-binding="true">
                 <constraints>
                   <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false">
@@ -72,22 +63,47 @@
                   </grid>
                 </children>
               </scrollpane>
+              <grid id="3530f" layout-manager="GridLayoutManager" row-count="2" column-count="1" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
+                <margin top="0" left="0" bottom="0" right="0"/>
+                <constraints>
+                  <grid row="1" column="1" row-span="1" col-span="1" vsize-policy="3" hsize-policy="3" anchor="6" fill="0" indent="0" use-parent-layout="false"/>
+                </constraints>
+                <properties/>
+                <border type="none"/>
+                <children>
+                  <component id="83418" class="javax.swing.JLabel" binding="VersionView">
+                    <constraints>
+                      <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="2" fill="0" indent="0" use-parent-layout="false"/>
+                    </constraints>
+                    <properties>
+                      <requestFocusEnabled value="false"/>
+                      <text value="Version:"/>
+                    </properties>
+                  </component>
+                  <component id="bb9a" class="javax.swing.JLabel" binding="BuildView">
+                    <constraints>
+                      <grid row="1" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="0" fill="0" indent="0" use-parent-layout="false"/>
+                    </constraints>
+                    <properties>
+                      <text value=""/>
+                      <verticalAlignment value="3"/>
+                      <verticalTextPosition value="3"/>
+                    </properties>
+                  </component>
+                </children>
+              </grid>
             </children>
           </grid>
-          <grid id="a8808" binding="SecondPanel" layout-manager="GridBagLayout">
+          <grid id="7e033" binding="SecondPanel" layout-manager="GridBagLayout">
             <constraints>
               <tabbedpane title-resource-bundle="messages" title-key="SecondPanel"/>
             </constraints>
-            <properties>
-              <background color="-1643536"/>
-              <enabled value="true"/>
-              <foreground color="-1"/>
-            </properties>
+            <properties/>
             <border type="none"/>
             <children>
               <component id="1a97e" class="javax.swing.JLabel" binding="Display_1st">
                 <constraints>
-                  <grid row="2" column="1" row-span="1" col-span="2" vsize-policy="0" hsize-policy="0" anchor="0" fill="0" indent="0" use-parent-layout="false"/>
+                  <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="0" fill="0" indent="0" use-parent-layout="false"/>
                   <gridbag weightx="0.0" weighty="0.0"/>
                 </constraints>
                 <properties>
@@ -98,7 +114,7 @@
               </component>
               <component id="cca5b" class="javax.swing.JLabel" binding="Display_2nd">
                 <constraints>
-                  <grid row="3" column="1" row-span="1" col-span="2" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+                  <grid row="1" column="0" row-span="1" col-span="2" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
                   <gridbag weightx="0.0" weighty="0.0"/>
                 </constraints>
                 <properties>
@@ -108,7 +124,7 @@
               </component>
               <component id="748d6" class="javax.swing.JLabel" binding="Display_3rd">
                 <constraints>
-                  <grid row="5" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="0" fill="0" indent="0" use-parent-layout="false"/>
+                  <grid row="2" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="0" fill="0" indent="0" use-parent-layout="false"/>
                   <gridbag weightx="0.0" weighty="0.0"/>
                 </constraints>
                 <properties>
@@ -119,36 +135,6 @@
                   <text resource-bundle="messages" key="Display_3rd"/>
                 </properties>
               </component>
-              <vspacer id="e1d3d">
-                <constraints>
-                  <grid row="9" column="2" row-span="1" col-span="1" vsize-policy="6" hsize-policy="1" anchor="0" fill="2" indent="0" use-parent-layout="false"/>
-                  <gridbag weightx="0.0" weighty="0.0"/>
-                </constraints>
-              </vspacer>
-              <vspacer id="6845c">
-                <constraints>
-                  <grid row="8" column="2" row-span="1" col-span="1" vsize-policy="6" hsize-policy="1" anchor="0" fill="2" indent="0" use-parent-layout="false"/>
-                  <gridbag weightx="0.0" weighty="0.0"/>
-                </constraints>
-              </vspacer>
-              <vspacer id="7f59">
-                <constraints>
-                  <grid row="7" column="2" row-span="1" col-span="1" vsize-policy="6" hsize-policy="1" anchor="0" fill="2" indent="0" use-parent-layout="false"/>
-                  <gridbag weightx="0.0" weighty="0.0"/>
-                </constraints>
-              </vspacer>
-              <vspacer id="fa0cd">
-                <constraints>
-                  <grid row="6" column="2" row-span="1" col-span="1" vsize-policy="6" hsize-policy="1" anchor="0" fill="2" indent="0" use-parent-layout="false"/>
-                  <gridbag weightx="0.0" weighty="0.0"/>
-                </constraints>
-              </vspacer>
-              <vspacer id="bac16">
-                <constraints>
-                  <grid row="4" column="2" row-span="1" col-span="1" vsize-policy="6" hsize-policy="1" anchor="0" fill="2" indent="0" use-parent-layout="false"/>
-                  <gridbag weightx="0.0" weighty="0.0"/>
-                </constraints>
-              </vspacer>
             </children>
           </grid>
           <grid id="9ef36" binding="ThirdPanel" layout-manager="GridLayoutManager" row-count="2" column-count="3" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
@@ -220,7 +206,7 @@
                     <properties/>
                     <border type="none"/>
                     <children>
-                      <grid id="df30f" layout-manager="GridLayoutManager" row-count="10" column-count="2" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
+                      <grid id="df30f" layout-manager="GridLayoutManager" row-count="11" column-count="2" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
                         <margin top="0" left="0" bottom="0" right="0"/>
                         <constraints/>
                         <properties/>
@@ -239,7 +225,7 @@
                           </component>
                           <component id="801b5" class="javax.swing.JCheckBox" binding="EnableHistoryLoaderCheckBox">
                             <constraints>
-                              <grid row="1" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false">
+                              <grid row="2" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false">
                                 <preferred-size width="402" height="25"/>
                               </grid>
                             </constraints>
@@ -250,7 +236,7 @@
                           </component>
                           <component id="72a4" class="javax.swing.JCheckBox" binding="EnableHardwareAccelerationCheckBox">
                             <constraints>
-                              <grid row="2" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false">
+                              <grid row="3" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false">
                                 <preferred-size width="402" height="25"/>
                               </grid>
                             </constraints>
@@ -261,7 +247,7 @@
                           </component>
                           <component id="69fe2" class="javax.swing.JCheckBox" binding="EnableCursorDisplayCheckBox">
                             <constraints>
-                              <grid row="3" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false">
+                              <grid row="4" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false">
                                 <preferred-size width="402" height="25"/>
                               </grid>
                             </constraints>
@@ -272,7 +258,7 @@
                           </component>
                           <component id="cbde1" class="javax.swing.JLabel" binding="MouseMoveOffsetsLabel">
                             <constraints>
-                              <grid row="4" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false">
+                              <grid row="5" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false">
                                 <preferred-size width="402" height="17"/>
                               </grid>
                             </constraints>
@@ -283,7 +269,7 @@
                           </component>
                           <component id="fc8e5" class="javax.swing.JSlider" binding="MouseMoveOffsetsSlider">
                             <constraints>
-                              <grid row="5" column="0" row-span="1" col-span="2" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false"/>
+                              <grid row="6" column="0" row-span="1" col-span="2" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false"/>
                             </constraints>
                             <properties>
                               <maximum value="150"/>
@@ -293,7 +279,7 @@
                           </component>
                           <component id="2876a" class="javax.swing.JCheckBox" binding="EnableProxyServerCheckBox">
                             <constraints>
-                              <grid row="6" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false">
+                              <grid row="7" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false">
                                 <preferred-size width="402" height="25"/>
                               </grid>
                             </constraints>
@@ -304,7 +290,7 @@
                           </component>
                           <component id="1c230" class="javax.swing.JLabel" binding="ProxyServerLabel">
                             <constraints>
-                              <grid row="7" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false">
+                              <grid row="8" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false">
                                 <preferred-size width="402" height="17"/>
                               </grid>
                             </constraints>
@@ -315,7 +301,7 @@
                           </component>
                           <component id="9a4c5" class="javax.swing.JCheckBox" binding="EnableSecureConnectionCheckBox">
                             <constraints>
-                              <grid row="8" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false">
+                              <grid row="9" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false">
                                 <preferred-size width="402" height="25"/>
                               </grid>
                             </constraints>
@@ -326,7 +312,7 @@
                           </component>
                           <component id="74555" class="javax.swing.JCheckBox" binding="AutoCheckUpdateCheckBox">
                             <constraints>
-                              <grid row="9" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false">
+                              <grid row="10" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false">
                                 <preferred-size width="402" height="25"/>
                               </grid>
                             </constraints>
@@ -337,11 +323,29 @@
                           </component>
                           <component id="f0f0c" class="javax.swing.JButton" binding="ProxyServerButton">
                             <constraints>
-                              <grid row="7" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="4" fill="0" indent="0" use-parent-layout="false"/>
+                              <grid row="8" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="4" fill="0" indent="0" use-parent-layout="false"/>
                             </constraints>
                             <properties>
                               <requestFocusEnabled value="false"/>
                               <text resource-bundle="messages" key="ProxyServerButton"/>
+                            </properties>
+                          </component>
+                          <component id="fa649" class="javax.swing.JLabel" binding="ThemeModeLabel">
+                            <constraints>
+                              <grid row="1" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+                            </constraints>
+                            <properties>
+                              <requestFocusEnabled value="false"/>
+                              <text resource-bundle="messages" key="ThemeModeLabel"/>
+                            </properties>
+                          </component>
+                          <component id="bb846" class="javax.swing.JComboBox" binding="ThemeModeComboBox">
+                            <constraints>
+                              <grid row="1" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="2" anchor="8" fill="1" indent="0" use-parent-layout="false"/>
+                            </constraints>
+                            <properties>
+                              <model/>
+                              <requestFocusEnabled value="false"/>
                             </properties>
                           </component>
                         </children>

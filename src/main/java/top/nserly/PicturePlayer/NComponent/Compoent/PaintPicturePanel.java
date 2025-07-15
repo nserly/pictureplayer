@@ -38,7 +38,7 @@ import java.util.concurrent.atomic.AtomicReference;
 public class PaintPicturePanel extends JPanel {
     //图片打开面板
     public static PaintPicturePanel paintPicture;
-    private final Thread init;
+    public final Thread init;
     //上部组件
     public JPanel AboveMainPanel;
     //下部总组件
@@ -98,7 +98,7 @@ public class PaintPicturePanel extends JPanel {
 
     public PictureInformationStorageManagement pictureInformationStorageManagement;
     //图片全屏窗体
-    FullScreenFrame fullScreenWindow;
+    public FullScreenFrame fullScreenWindow;
     private JPanel MainPanel;
 
     //构造方法（函数）（用于直接显示图片）

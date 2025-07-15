@@ -1,7 +1,5 @@
 package top.nserly.PicturePlayer.NComponent.Compoent;
 
-import top.nserly.GUIStarter;
-
 import javax.swing.*;
 
 public class PercentLabel extends JLabel {
@@ -10,8 +8,8 @@ public class PercentLabel extends JLabel {
         String text = percent + "%";
         String lastText = getText();
         super.setText(text);
-        if (text.length() != lastText.length() && GUIStarter.main.paintPicture != null && GUIStarter.main.paintPicture.AboveMainPanel != null) {
-            GUIStarter.main.paintPicture.AboveMainPanel.revalidate();
+        if (text.length() != lastText.length() && PaintPicturePanel.paintPicture != null && PaintPicturePanel.paintPicture.AboveMainPanel != null) {
+            PaintPicturePanel.paintPicture.AboveMainPanel.revalidate();
         }
 
     }

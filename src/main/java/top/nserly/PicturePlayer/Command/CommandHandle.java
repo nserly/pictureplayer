@@ -1,31 +1,31 @@
 package top.nserly.PicturePlayer.Command;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import top.nserly.PicturePlayer.Version.DownloadChecker.CheckAndDownloadUpdate;
+import top.nserly.SoftwareCollections_API.Handler.Exception.ExceptionHandler;
 import top.nserly.SoftwareCollections_API.String.RandomString;
 
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
-import java.nio.charset.StandardCharsets;
+import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.util.ArrayList;
 
+@Slf4j
 public class CommandHandle {
     private static final String CURRENT_JAR_PATH; // 当前JAR文件路径
     private static final String CURRENT_JAR_NAME;//当前JAR文件路径
-    private static final Logger logger = LoggerFactory.getLogger(CommandHandle.class);
 
     private static final String MainFileSuffix;
 
     static {
         ClassLoader classLoader = CommandHandle.class.getClassLoader();
         URL url = classLoader.getResource(CommandHandle.class.getName().replace('.', '/') + ".class");
-        if(url == null)throw new RuntimeException("Can't find the current JAR file");
+        if (url == null) throw new RuntimeException("Can't find the current JAR file");
         CURRENT_JAR_PATH = url.getPath().substring(5, url.getPath().lastIndexOf("!"));
         CURRENT_JAR_NAME = CURRENT_JAR_PATH.substring(CURRENT_JAR_PATH.lastIndexOf("/") + 1);
         MainFileSuffix = RandomString.getRandomString(5);
@@ -37,7 +37,7 @@ public class CommandHandle {
         Path sourcePath = Path.of(DownloadMainFilePath);
         Path destinationPath = Path.of("./" + DownloadMainFilePath.substring(DownloadMainFilePath.lastIndexOf("/") + 1) + MainFileSuffix);
         Files.move(sourcePath, destinationPath, StandardCopyOption.REPLACE_EXISTING);
-        logger.info("Main File moved successfully.");
+        log.info("Main File moved successfully.");
     }
 
     public static void moveFileToLibDirectory(ArrayList<String> DownloadLibFilePath) throws IOException {
@@ -60,7 +60,7 @@ public class CommandHandle {
             Path destinationPath = Path.of("./lib/" + string.substring(string.lastIndexOf("/") + 1));
             Files.move(sourcePath, destinationPath, StandardCopyOption.REPLACE_EXISTING);
         }
-        logger.info("Lib File moved successfully.");
+        log.info("Lib File moved successfully.");
     }
 
     public static String detectOSType() {
@@ -80,20 +80,20 @@ public class CommandHandle {
                 try {
                     createAndRunWindowsBatchFile(DownloadFilePath, OpenedPicturePath);
                 } catch (IOException e) {
-                    logger.error(e.getMessage());
-                    logger.error("Automatic update failed");
+                    log.error(ExceptionHandler.getExceptionMessage(e));
+                    log.error("Automatic update failed");
                 }
                 break;
             case "linux":
                 try {
                     createAndRunLinuxShellScript(DownloadFilePath, OpenedPicturePath);
                 } catch (IOException e) {
-                    logger.error(e.getMessage());
-                    logger.error("Automatic update failed");
+                    log.error(ExceptionHandler.getExceptionMessage(e));
+                    log.error("Automatic update failed");
                 }
                 break;
             default:
-                logger.error("Unsupported OS:\"{}\"", osType);
+                log.error("Unsupported OS:\"{}\"", osType);
         }
     }
 
@@ -106,8 +106,7 @@ public class CommandHandle {
     }
 
     public static void createAndRunWindowsBatchFile(String DownloadFilePath, String OpenedPicturePath) throws IOException {
-        String batchContent =
-                "echo @off\n" +
+        String batchContent = "@echo off\n" +
                         "timeout /t 3\n"
                         + "del \".\\" + CURRENT_JAR_NAME + "\"\n"
                         + "ren \"" + DownloadFilePath.substring(DownloadFilePath.lastIndexOf("/") + 1) + MainFileSuffix + "\" \"" + CURRENT_JAR_NAME + "\"\n" +
@@ -117,18 +116,20 @@ public class CommandHandle {
             batchContent = batchContent + "\"" + OpenedPicturePath + "\"";
         }
 
+        Charset ansiCharset = Charset.forName("GBK");
+
         Path batchPath = Path.of("./replace.bat");
-        Files.writeString(batchPath, batchContent, StandardCharsets.US_ASCII);
+        Files.writeString(batchPath, batchContent, ansiCharset);
 
         batchContent = "start replace.bat";
         batchPath = Path.of("./runnable.bat");
-        Files.write(batchPath, batchContent.getBytes());
+        Files.writeString(batchPath, batchContent, ansiCharset);
 
-        logger.info("The script file is created!");
-        logger.info("Start running the script file and end the current software...");
+        log.info("The script file is created!");
+        log.info("Start running the script file and end the current software...");
 
         Runtime.getRuntime().exec(new String[]{"runnable.bat"});
-        logger.info("Program Termination!");
+        log.info("Program Termination!");
 
         System.exit(0);
     }
@@ -149,10 +150,10 @@ public class CommandHandle {
         Path shellPath = Path.of("./replace.sh");
         Files.write(shellPath, shellContent.getBytes());
         Files.setPosixFilePermissions(shellPath, PosixFilePermissions.fromString("rwx------"));
-        logger.info("The script file is created");
-        logger.info("Start running the script file and end the current software...");
+        log.info("The script file is created");
+        log.info("Start running the script file and end the current software...");
         Runtime.getRuntime().exec(new String[]{"sh", "-c", "nohup sh ./replace.sh &"});
-        logger.info("Program Termination!");
+        log.info("Program Termination!");
         System.exit(0);
     }
 

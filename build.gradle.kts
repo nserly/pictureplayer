@@ -18,7 +18,18 @@ repositories {
     }
 }
 
+sourceSets {
+    getByName("test") {
+        java {
+            setSrcDirs(listOf("src/main/test")) // 替换为你的目录
+        }
+    }
+}
+
+
 dependencies {
+    api(libs.com.formdev.flatlaf);
+    api(libs.com.formdev.flatlaf.extras);
     api(libs.com.google.code.gson.gson)
     api(libs.com.github.oshi.oshi.core)
     api(libs.com.twelvemonkeys.imageio.imageio.core)
@@ -26,6 +37,8 @@ dependencies {
     api(libs.com.twelvemonkeys.imageio.imageio.tiff)
     api(libs.com.twelvemonkeys.imageio.imageio.webp)
     api(libs.net.coobird.thumbnailator)
+    api(libs.net.java.dev.jna)
+    api(libs.net.java.dev.jna.platform)
     api(libs.com.github.adedayo.intellij.sdk.forms.rt)
     api(libs.org.apache.logging.log4j.log4j.api)
     api(libs.org.apache.logging.log4j.log4j.core)

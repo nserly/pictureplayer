@@ -1,7 +1,6 @@
 package top.nserly.PicturePlayer.Loading;
 
 public @interface DefaultArgs {
-
     //启用退出提示
     boolean EnableConfirmExit() default true;
 
@@ -28,5 +27,8 @@ public @interface DefaultArgs {
 
     //启用硬件加速
     boolean EnableHardwareAcceleration() default true;
+
+    //主题模式（0:跟随系统 1:Dark主题 2:Light主题）
+    int ThemeMode() default 0;
 
 }

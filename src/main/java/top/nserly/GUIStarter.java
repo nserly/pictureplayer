@@ -14,6 +14,8 @@ import top.nserly.PicturePlayer.NComponent.Frame.ProxyServerChooser;
 import top.nserly.PicturePlayer.NComponent.Listener.ChangeFocusListener;
 import top.nserly.PicturePlayer.Settings.SettingsInfoHandle;
 import top.nserly.PicturePlayer.Size.SizeOperate;
+import top.nserly.PicturePlayer.UIManager.FontPreservingUIUpdater;
+import top.nserly.PicturePlayer.UIManager.UIManager;
 import top.nserly.PicturePlayer.Utils.ImageManager.CheckFileIsRightPictureType;
 import top.nserly.PicturePlayer.Utils.ImageManager.Info.GetImageInformation;
 import top.nserly.PicturePlayer.Utils.Window.WindowLocation;
@@ -85,6 +87,7 @@ public class GUIStarter extends JFrame {
     private JLabel TotalThread;
     private JLabel DefaultJVMMem;
     private JLabel ProgramStartTime;
+    private static final String[] ThemeComboBoxStringItems = new String[]{"Theme_0", "Theme_1", "Theme_2"};
     private JLabel CPUName;
     private JLabel JavaPath;
     private JCheckBox EnableHardwareAccelerationCheckBox;
@@ -120,28 +123,19 @@ public class GUIStarter extends JFrame {
         }
     };
     public PaintPicturePanel paintPicture;
-    private final Thread init_PaintPicture = new Thread(() -> {
-        try {
-            UIManager.setLookAndFeel("com.sun.java.swing.plaf.windows.WindowsLookAndFeel");
-        } catch (ClassNotFoundException | IllegalAccessException | UnsupportedLookAndFeelException |
-                 InstantiationException e) {
-            log.error(ExceptionHandler.getExceptionMessage(e));
-        }
-        paintPicture = new PaintPicturePanel();
-    });
+    private JLabel BuildView;
+    private JLabel ThemeModeLabel;
 
-    public static void main(String[] args) throws IOException, InterruptedException {
-        main = new GUIStarter("Picture Player(Version:" + PicturePlayerVersion.getVersion() + ")");
-        new Thread(() -> {
-            for (String arg : args) {
-                if (GetImageInformation.isImageFile(new File(arg))) {
-                    main.openPicture(arg);
-                    return;
-                }
-            }
-        }).start();
-        extractedSystemInfoToLog();
+    static {
+        //初始化Init
+        init = new Init<>();
+        init.setUpdate(true);
+        ExceptionHandler.setUncaughtExceptionHandler(log);
+        log.info("The software starts running...");
+        System.setProperty("sun.java2d.opengl", "true");
     }
+
+    private static Method $$$cachedGetBundleMethod$$$ = null;
 
     //打开图片
     public void openPicture(String path) {
@@ -167,18 +161,13 @@ public class GUIStarter extends JFrame {
                 log.error(ExceptionHandler.getExceptionMessage(e));
             }
         }).start();
-    }        //静态代码块
-
-    static {
-        //初始化Init
-        init = new Init<>();
-        init.setUpdate(true);
-        ExceptionHandler.setUncaughtExceptionHandler(log);
-        log.info("The software starts running...");
-        System.setProperty("sun.java2d.opengl", "true");
     }
 
-    private static Method $$$cachedGetBundleMethod$$$ = null;
+    private JComboBox<String> ThemeModeComboBox;
+    private final Thread init_PaintPicture = new Thread(() -> {
+        paintPicture = new PaintPicturePanel();
+
+    });
 
     public GUIStarter(String title) {
         super(title);
@@ -241,6 +230,21 @@ public class GUIStarter extends JFrame {
             }
         }).start();
         PaintPicturePanel.isEnableHardwareAcceleration = Boolean.parseBoolean(init.getProperties().getProperty("EnableHardwareAcceleration")) && GetImageInformation.isHardwareAccelerated;
+    }
+
+    public static void main(String[] args) throws IOException, InterruptedException {
+        UIManager.getUIManager().setTheme(SettingsInfoHandle.getInt("ThemeMode", init.getProperties()));
+        UIManager.getUIManager().applyThemeOnSetAndRefreshWindows();
+        main = new GUIStarter("Picture Player(Version:" + PicturePlayerVersion.getVersion() + ")");
+        new Thread(() -> {
+            for (String arg : args) {
+                if (GetImageInformation.isImageFile(new File(arg))) {
+                    main.openPicture(arg);
+                    return;
+                }
+            }
+        }).start();
+        extractedSystemInfoToLog();
     }    private final DropTargetAdapter dropTargetAdapter = new DropTargetAdapter() {
         public void drop(DropTargetDropEvent dtde) {
             try {
@@ -423,6 +427,7 @@ public class GUIStarter extends JFrame {
     //初始化所有组件设置
     private void init() {
         VersionView.setText(VersionView.getText() + PicturePlayerVersion.getShorterVersion());
+        BuildView.setText(PicturePlayerVersion.getBuildVersion());
         TurnButton.addMouseListener(changeFocusListener);
         TurnButton.addActionListener(e -> {
             String path = textField1.getText().trim();
@@ -480,6 +485,7 @@ public class GUIStarter extends JFrame {
         ProxyServerButton.addActionListener(e -> {
             proxyServerChooser.setVisible(true);
         });
+
         new Thread(() -> {
             ExceptionHandler.setUncaughtExceptionHandler(log);
             JavaPath.setText(JavaPath.getText() + System.getProperty("sun.boot.library.path"));
@@ -512,6 +518,7 @@ public class GUIStarter extends JFrame {
                 }
             });
         }).start();
+
         //设置窗体在显示时自动获取焦点
         addWindowListener(new WindowAdapter() {
             @Override
@@ -591,10 +598,6 @@ public class GUIStarter extends JFrame {
         FirstPanel.setName("");
         FirstPanel.setToolTipText("");
         tabbedPane1.addTab(this.$$$getMessageFromBundle$$$("messages", "FirstPanel"), FirstPanel);
-        VersionView = new JLabel();
-        VersionView.setRequestFocusEnabled(false);
-        VersionView.setText("Version:");
-        FirstPanel.add(VersionView, new GridConstraints(1, 1, 1, 1, GridConstraints.ANCHOR_SOUTHEAST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         textField1 = new JTextField();
         FirstPanel.add(textField1, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
         TurnButton = new JButton();
@@ -606,11 +609,20 @@ public class GUIStarter extends JFrame {
         FileChoosePane = new JPanel();
         FileChoosePane.setLayout(new FlowLayout(FlowLayout.CENTER, 5, 5));
         scrollPane1.setViewportView(FileChoosePane);
+        final JPanel panel2 = new JPanel();
+        panel2.setLayout(new GridLayoutManager(2, 1, new Insets(0, 0, 0, 0), -1, -1));
+        FirstPanel.add(panel2, new GridConstraints(1, 1, 1, 1, GridConstraints.ANCHOR_SOUTHEAST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
+        VersionView = new JLabel();
+        VersionView.setRequestFocusEnabled(false);
+        VersionView.setText("Version:");
+        panel2.add(VersionView, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_SOUTH, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        BuildView = new JLabel();
+        BuildView.setText("");
+        BuildView.setVerticalAlignment(3);
+        BuildView.setVerticalTextPosition(3);
+        panel2.add(BuildView, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         SecondPanel = new JPanel();
         SecondPanel.setLayout(new GridBagLayout());
-        SecondPanel.setBackground(new Color(-1643536));
-        SecondPanel.setEnabled(true);
-        SecondPanel.setForeground(new Color(-1));
         tabbedPane1.addTab(this.$$$getMessageFromBundle$$$("messages", "SecondPanel"), SecondPanel);
         Display_1st = new JLabel();
         Font Display_1stFont = this.$$$getFont$$$(null, -1, 35, Display_1st.getFont());
@@ -619,17 +631,16 @@ public class GUIStarter extends JFrame {
         this.$$$loadLabelText$$$(Display_1st, this.$$$getMessageFromBundle$$$("messages", "Display_1st"));
         GridBagConstraints gbc;
         gbc = new GridBagConstraints();
-        gbc.gridx = 1;
-        gbc.gridy = 2;
-        gbc.gridwidth = 2;
+        gbc.gridx = 0;
+        gbc.gridy = 0;
         SecondPanel.add(Display_1st, gbc);
         Display_2nd = new JLabel();
         Font Display_2ndFont = this.$$$getFont$$$(null, -1, 20, Display_2nd.getFont());
         if (Display_2ndFont != null) Display_2nd.setFont(Display_2ndFont);
         this.$$$loadLabelText$$$(Display_2nd, this.$$$getMessageFromBundle$$$("messages", "Display_2nd"));
         gbc = new GridBagConstraints();
-        gbc.gridx = 1;
-        gbc.gridy = 3;
+        gbc.gridx = 0;
+        gbc.gridy = 1;
         gbc.gridwidth = 2;
         gbc.anchor = GridBagConstraints.WEST;
         SecondPanel.add(Display_2nd, gbc);
@@ -641,47 +652,17 @@ public class GUIStarter extends JFrame {
         Display_3rd.setHorizontalTextPosition(0);
         this.$$$loadLabelText$$$(Display_3rd, this.$$$getMessageFromBundle$$$("messages", "Display_3rd"));
         gbc = new GridBagConstraints();
-        gbc.gridx = 2;
-        gbc.gridy = 5;
+        gbc.gridx = 0;
+        gbc.gridy = 2;
         SecondPanel.add(Display_3rd, gbc);
-        final JPanel spacer1 = new JPanel();
-        gbc = new GridBagConstraints();
-        gbc.gridx = 2;
-        gbc.gridy = 9;
-        gbc.fill = GridBagConstraints.VERTICAL;
-        SecondPanel.add(spacer1, gbc);
-        final JPanel spacer2 = new JPanel();
-        gbc = new GridBagConstraints();
-        gbc.gridx = 2;
-        gbc.gridy = 8;
-        gbc.fill = GridBagConstraints.VERTICAL;
-        SecondPanel.add(spacer2, gbc);
-        final JPanel spacer3 = new JPanel();
-        gbc = new GridBagConstraints();
-        gbc.gridx = 2;
-        gbc.gridy = 7;
-        gbc.fill = GridBagConstraints.VERTICAL;
-        SecondPanel.add(spacer3, gbc);
-        final JPanel spacer4 = new JPanel();
-        gbc = new GridBagConstraints();
-        gbc.gridx = 2;
-        gbc.gridy = 6;
-        gbc.fill = GridBagConstraints.VERTICAL;
-        SecondPanel.add(spacer4, gbc);
-        final JPanel spacer5 = new JPanel();
-        gbc = new GridBagConstraints();
-        gbc.gridx = 2;
-        gbc.gridy = 4;
-        gbc.fill = GridBagConstraints.VERTICAL;
-        SecondPanel.add(spacer5, gbc);
         ThirdPanel = new JPanel();
         ThirdPanel.setLayout(new GridLayoutManager(2, 3, new Insets(0, 0, 0, 0), -1, -1));
         tabbedPane1.addTab(this.$$$getMessageFromBundle$$$("messages", "ThirdPanel"), ThirdPanel);
         A = new JPanel();
         A.setLayout(new GridLayoutManager(2, 3, new Insets(0, 0, 0, 0), -1, -1));
         ThirdPanel.add(A, new GridConstraints(1, 0, 1, 3, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
-        final Spacer spacer6 = new Spacer();
-        A.add(spacer6, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_VERTICAL, 1, GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
+        final Spacer spacer1 = new Spacer();
+        A.add(spacer1, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_VERTICAL, 1, GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
         ResetButton = new JButton();
         ResetButton.setRequestFocusEnabled(false);
         this.$$$loadButtonText$$$(ResetButton, this.$$$getMessageFromBundle$$$("messages", "ResetButton"));
@@ -701,54 +682,63 @@ public class GUIStarter extends JFrame {
         ThirdPanel.add(B, new GridConstraints(0, 0, 1, 3, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, 1, 1, null, null, null, 0, false));
         final JScrollPane scrollPane2 = new JScrollPane();
         B.add(scrollPane2, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_BOTH, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_WANT_GROW, null, new Dimension(502, 372), null, 0, false));
-        final JPanel panel2 = new JPanel();
-        panel2.setLayout(new GridLayoutManager(10, 2, new Insets(0, 0, 0, 0), -1, -1));
-        scrollPane2.setViewportView(panel2);
+        final JPanel panel3 = new JPanel();
+        panel3.setLayout(new GridLayoutManager(11, 2, new Insets(0, 0, 0, 0), -1, -1));
+        scrollPane2.setViewportView(panel3);
         EnableConfirmExitCheckBox = new JCheckBox();
         EnableConfirmExitCheckBox.setRequestFocusEnabled(false);
         this.$$$loadButtonText$$$(EnableConfirmExitCheckBox, this.$$$getMessageFromBundle$$$("messages", "EnableConfirmExit"));
-        panel2.add(EnableConfirmExitCheckBox, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(402, 25), null, 0, false));
+        panel3.add(EnableConfirmExitCheckBox, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(402, 25), null, 0, false));
         EnableHistoryLoaderCheckBox = new JCheckBox();
         EnableHistoryLoaderCheckBox.setRequestFocusEnabled(false);
         this.$$$loadButtonText$$$(EnableHistoryLoaderCheckBox, this.$$$getMessageFromBundle$$$("messages", "EnableHistoryLoader"));
-        panel2.add(EnableHistoryLoaderCheckBox, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(402, 25), null, 0, false));
+        panel3.add(EnableHistoryLoaderCheckBox, new GridConstraints(2, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(402, 25), null, 0, false));
         EnableHardwareAccelerationCheckBox = new JCheckBox();
         EnableHardwareAccelerationCheckBox.setRequestFocusEnabled(false);
         this.$$$loadButtonText$$$(EnableHardwareAccelerationCheckBox, this.$$$getMessageFromBundle$$$("messages", "EnableHardwareAcceleration"));
-        panel2.add(EnableHardwareAccelerationCheckBox, new GridConstraints(2, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(402, 25), null, 0, false));
+        panel3.add(EnableHardwareAccelerationCheckBox, new GridConstraints(3, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(402, 25), null, 0, false));
         EnableCursorDisplayCheckBox = new JCheckBox();
         EnableCursorDisplayCheckBox.setRequestFocusEnabled(false);
         this.$$$loadButtonText$$$(EnableCursorDisplayCheckBox, this.$$$getMessageFromBundle$$$("messages", "EnableCursorDisplayCheckBox"));
-        panel2.add(EnableCursorDisplayCheckBox, new GridConstraints(3, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(402, 25), null, 0, false));
+        panel3.add(EnableCursorDisplayCheckBox, new GridConstraints(4, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(402, 25), null, 0, false));
         MouseMoveOffsetsLabel = new JLabel();
         MouseMoveOffsetsLabel.setRequestFocusEnabled(false);
         this.$$$loadLabelText$$$(MouseMoveOffsetsLabel, this.$$$getMessageFromBundle$$$("messages", "MouseMoveOffsetsLabel"));
-        panel2.add(MouseMoveOffsetsLabel, new GridConstraints(4, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(402, 17), null, 0, false));
+        panel3.add(MouseMoveOffsetsLabel, new GridConstraints(5, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(402, 17), null, 0, false));
         MouseMoveOffsetsSlider = new JSlider();
         MouseMoveOffsetsSlider.setMaximum(150);
         MouseMoveOffsetsSlider.setMinimum(-65);
         MouseMoveOffsetsSlider.setRequestFocusEnabled(false);
-        panel2.add(MouseMoveOffsetsSlider, new GridConstraints(5, 0, 1, 2, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        panel3.add(MouseMoveOffsetsSlider, new GridConstraints(6, 0, 1, 2, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         EnableProxyServerCheckBox = new JCheckBox();
         EnableProxyServerCheckBox.setRequestFocusEnabled(false);
         this.$$$loadButtonText$$$(EnableProxyServerCheckBox, this.$$$getMessageFromBundle$$$("messages", "EnableProxyServerCheckBox"));
-        panel2.add(EnableProxyServerCheckBox, new GridConstraints(6, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(402, 25), null, 0, false));
+        panel3.add(EnableProxyServerCheckBox, new GridConstraints(7, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(402, 25), null, 0, false));
         ProxyServerLabel = new JLabel();
         ProxyServerLabel.setRequestFocusEnabled(false);
         this.$$$loadLabelText$$$(ProxyServerLabel, this.$$$getMessageFromBundle$$$("messages", "ProxyServerLabel"));
-        panel2.add(ProxyServerLabel, new GridConstraints(7, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(402, 17), null, 0, false));
+        panel3.add(ProxyServerLabel, new GridConstraints(8, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(402, 17), null, 0, false));
         EnableSecureConnectionCheckBox = new JCheckBox();
         EnableSecureConnectionCheckBox.setRequestFocusEnabled(false);
         this.$$$loadButtonText$$$(EnableSecureConnectionCheckBox, this.$$$getMessageFromBundle$$$("messages", "EnableSecureConnectionCheckBox"));
-        panel2.add(EnableSecureConnectionCheckBox, new GridConstraints(8, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(402, 25), null, 0, false));
+        panel3.add(EnableSecureConnectionCheckBox, new GridConstraints(9, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(402, 25), null, 0, false));
         AutoCheckUpdateCheckBox = new JCheckBox();
         AutoCheckUpdateCheckBox.setRequestFocusEnabled(false);
         this.$$$loadButtonText$$$(AutoCheckUpdateCheckBox, this.$$$getMessageFromBundle$$$("messages", "AutoCheckUpdateCheckBox"));
-        panel2.add(AutoCheckUpdateCheckBox, new GridConstraints(9, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(402, 25), null, 0, false));
+        panel3.add(AutoCheckUpdateCheckBox, new GridConstraints(10, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(402, 25), null, 0, false));
         ProxyServerButton = new JButton();
         ProxyServerButton.setRequestFocusEnabled(false);
         this.$$$loadButtonText$$$(ProxyServerButton, this.$$$getMessageFromBundle$$$("messages", "ProxyServerButton"));
-        panel2.add(ProxyServerButton, new GridConstraints(7, 1, 1, 1, GridConstraints.ANCHOR_EAST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        panel3.add(ProxyServerButton, new GridConstraints(8, 1, 1, 1, GridConstraints.ANCHOR_EAST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        ThemeModeLabel = new JLabel();
+        ThemeModeLabel.setRequestFocusEnabled(false);
+        this.$$$loadLabelText$$$(ThemeModeLabel, this.$$$getMessageFromBundle$$$("messages", "ThemeModeLabel"));
+        panel3.add(ThemeModeLabel, new GridConstraints(1, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        ThemeModeComboBox = new JComboBox();
+        final DefaultComboBoxModel defaultComboBoxModel1 = new DefaultComboBoxModel();
+        ThemeModeComboBox.setModel(defaultComboBoxModel1);
+        ThemeModeComboBox.setRequestFocusEnabled(false);
+        panel3.add(ThemeModeComboBox, new GridConstraints(1, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final JScrollPane scrollPane3 = new JScrollPane();
         tabbedPane1.addTab(this.$$$getMessageFromBundle$$$("messages", "FourthPanel"), scrollPane3);
         FourthPanel = new JPanel();
@@ -759,8 +749,8 @@ public class GUIStarter extends JFrame {
         if (JVMVersionLabelFont != null) JVMVersionLabel.setFont(JVMVersionLabelFont);
         this.$$$loadLabelText$$$(JVMVersionLabel, this.$$$getMessageFromBundle$$$("messages", "JVMVersionLabel"));
         FourthPanel.add(JVMVersionLabel, new GridConstraints(3, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        final Spacer spacer7 = new Spacer();
-        FourthPanel.add(spacer7, new GridConstraints(10, 0, 1, 7, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_VERTICAL, 1, GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
+        final Spacer spacer2 = new Spacer();
+        FourthPanel.add(spacer2, new GridConstraints(10, 0, 1, 7, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_VERTICAL, 1, GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
         CurrentSoftwareVersionLabel = new JLabel();
         Font CurrentSoftwareVersionLabelFont = this.$$$getFont$$$(null, -1, 16, CurrentSoftwareVersionLabel.getFont());
         if (CurrentSoftwareVersionLabelFont != null)
@@ -816,14 +806,14 @@ public class GUIStarter extends JFrame {
         if (DefaultJVMMemFont != null) DefaultJVMMem.setFont(DefaultJVMMemFont);
         this.$$$loadLabelText$$$(DefaultJVMMem, this.$$$getMessageFromBundle$$$("messages", "DefaultJVMMem"));
         FourthPanel.add(DefaultJVMMem, new GridConstraints(5, 2, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        final Spacer spacer8 = new Spacer();
-        FourthPanel.add(spacer8, new GridConstraints(0, 6, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
-        final Spacer spacer9 = new Spacer();
-        FourthPanel.add(spacer9, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
-        final Spacer spacer10 = new Spacer();
-        FourthPanel.add(spacer10, new GridConstraints(0, 5, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
-        final Spacer spacer11 = new Spacer();
-        FourthPanel.add(spacer11, new GridConstraints(0, 4, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
+        final Spacer spacer3 = new Spacer();
+        FourthPanel.add(spacer3, new GridConstraints(0, 6, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
+        final Spacer spacer4 = new Spacer();
+        FourthPanel.add(spacer4, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
+        final Spacer spacer5 = new Spacer();
+        FourthPanel.add(spacer5, new GridConstraints(0, 5, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
+        final Spacer spacer6 = new Spacer();
+        FourthPanel.add(spacer6, new GridConstraints(0, 4, 1, 1, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_WANT_GROW, 1, null, null, null, 0, false));
         JavaPath = new JLabel();
         Font JavaPathFont = this.$$$getFont$$$(null, -1, 16, JavaPath.getFont());
         if (JavaPathFont != null) JavaPath.setFont(JavaPathFont);
@@ -867,7 +857,68 @@ public class GUIStarter extends JFrame {
         return fontWithFallback instanceof FontUIResource ? fontWithFallback : new FontUIResource(fontWithFallback);
     }
 
-
+    //设置界面
+    private void settings() {
+        for (String i : ThemeComboBoxStringItems) {
+            ThemeModeComboBox.addItem(Bundle.getMessage(i));
+        }
+        reFresh();
+        ThemeModeComboBox.addItemListener(e -> {
+            centre.CurrentData.replace("ThemeMode", String.valueOf(ThemeModeComboBox.getSelectedIndex()));
+            UIManager.getUIManager().setTheme(ThemeModeComboBox
+                    .getSelectedIndex());
+            UIManager.getUIManager().applyThemeOnSetAndRefreshWindows();
+            FontPreservingUIUpdater.updateComponentTreeUIWithFontPreservation(paintPicture);
+            FontPreservingUIUpdater.updateComponentTreeUIWithFontPreservation(paintPicture.fullScreenWindow);
+            settingRevised(true);
+        });
+        EnableConfirmExitCheckBox.addActionListener(e -> {
+            centre.CurrentData.replace("EnableConfirmExit", String.valueOf(EnableConfirmExitCheckBox.isSelected()));
+            settingRevised(true);
+        });
+        EnableHistoryLoaderCheckBox.addActionListener(e -> {
+            centre.CurrentData.replace("EnableHistoryLoader", String.valueOf(EnableHistoryLoaderCheckBox.isSelected()));
+            settingRevised(true);
+        });
+        EnableCursorDisplayCheckBox.addActionListener(e -> {
+            centre.CurrentData.replace("EnableCursorDisplay", String.valueOf(EnableCursorDisplayCheckBox.isSelected()));
+            settingRevised(true);
+        });
+        MouseMoveOffsetsSlider.addChangeListener(e -> {
+            centre.CurrentData.replace("MouseMoveOffsets", String.valueOf(MouseMoveOffsetsSlider.getValue()));
+            StringBuilder stringBuffer1 = new StringBuilder(MouseMoveLabelPrefix);
+            stringBuffer1.insert(MouseMoveLabelPrefix.indexOf(":") + 1, MouseMoveOffsetsSlider.getValue() + "% ");
+            MouseMoveOffsetsLabel.setText(stringBuffer1.toString());
+            settingRevised(true);
+        });
+        EnableProxyServerCheckBox.addActionListener(e -> {
+            centre.CurrentData.replace("EnableProxyServer", String.valueOf(EnableProxyServerCheckBox.isSelected()));
+            ProxyServerButton.setVisible(EnableProxyServerCheckBox.isSelected());
+            ProxyServerLabel.setVisible(EnableProxyServerCheckBox.isSelected());
+            settingRevised(true);
+        });
+        EnableHardwareAccelerationCheckBox.addActionListener(e -> {
+            centre.CurrentData.replace("EnableHardwareAcceleration", String.valueOf(EnableHardwareAccelerationCheckBox.isSelected()));
+            ProxyServerButton.setEnabled(EnableHardwareAccelerationCheckBox.isSelected());
+            settingRevised(true);
+        });
+        EnableSecureConnectionCheckBox.addActionListener(e -> {
+            if (!EnableSecureConnectionCheckBox.isSelected()) {
+                EnableSecureConnectionCheckBox.setSelected(true);
+                int choose = JOptionPane.showConfirmDialog(GUIStarter.main, Bundle.getMessage("ConfirmCloseSecureConnection_Content_1Line") + "\n" + Bundle.getMessage("ConfirmCloseSecureConnection_Content_2Line"), Bundle.getMessage("ConfirmCloseSecureConnection_Title"), JOptionPane.YES_NO_OPTION);
+                if (choose != 0) {
+                    return;
+                }
+                EnableSecureConnectionCheckBox.setSelected(false);
+            }
+            centre.CurrentData.replace("EnableSecureConnection", String.valueOf(EnableSecureConnectionCheckBox.isSelected()));
+            settingRevised(true);
+        });
+        AutoCheckUpdateCheckBox.addActionListener(e -> {
+            centre.CurrentData.replace("AutoCheckUpdate", String.valueOf(AutoCheckUpdateCheckBox.isSelected()));
+            settingRevised(true);
+        });
+    }
 
     private String $$$getMessageFromBundle$$$(String path, String key) {
         ResourceBundle bundle;
@@ -946,55 +997,24 @@ public class GUIStarter extends JFrame {
     }
 
 
-    //设置界面
-    private void settings() {
-        reFresh();
-        EnableConfirmExitCheckBox.addActionListener(e -> {
-            centre.CurrentData.replace("EnableConfirmExit", String.valueOf(EnableConfirmExitCheckBox.isSelected()));
-            settingRevised(true);
-        });
-        EnableHistoryLoaderCheckBox.addActionListener(e -> {
-            centre.CurrentData.replace("EnableHistoryLoader", String.valueOf(EnableHistoryLoaderCheckBox.isSelected()));
-            settingRevised(true);
-        });
-        EnableCursorDisplayCheckBox.addActionListener(e -> {
-            centre.CurrentData.replace("EnableCursorDisplay", String.valueOf(EnableCursorDisplayCheckBox.isSelected()));
-            settingRevised(true);
-        });
-        MouseMoveOffsetsSlider.addChangeListener(e -> {
-            centre.CurrentData.replace("MouseMoveOffsets", String.valueOf(MouseMoveOffsetsSlider.getValue()));
-            StringBuilder stringBuffer1 = new StringBuilder(MouseMoveLabelPrefix);
-            stringBuffer1.insert(MouseMoveLabelPrefix.indexOf(":") + 1, MouseMoveOffsetsSlider.getValue() + "% ");
-            MouseMoveOffsetsLabel.setText(stringBuffer1.toString());
-            settingRevised(true);
-        });
-        EnableProxyServerCheckBox.addActionListener(e -> {
-            centre.CurrentData.replace("EnableProxyServer", String.valueOf(EnableProxyServerCheckBox.isSelected()));
-            ProxyServerButton.setVisible(EnableProxyServerCheckBox.isSelected());
-            ProxyServerLabel.setVisible(EnableProxyServerCheckBox.isSelected());
-            settingRevised(true);
-        });
-        EnableHardwareAccelerationCheckBox.addActionListener(e -> {
-            centre.CurrentData.replace("EnableHardwareAcceleration", String.valueOf(EnableHardwareAccelerationCheckBox.isSelected()));
-            ProxyServerButton.setEnabled(EnableHardwareAccelerationCheckBox.isSelected());
-            settingRevised(true);
-        });
-        EnableSecureConnectionCheckBox.addActionListener(e -> {
-            if (!EnableSecureConnectionCheckBox.isSelected()) {
-                EnableSecureConnectionCheckBox.setSelected(true);
-                int choose = JOptionPane.showConfirmDialog(GUIStarter.main, Bundle.getMessage("ConfirmCloseSecureConnection_Content_1Line") + "\n" + Bundle.getMessage("ConfirmCloseSecureConnection_Content_2Line"), Bundle.getMessage("ConfirmCloseSecureConnection_Title"), JOptionPane.YES_NO_OPTION);
-                if (choose != 0) {
-                    return;
-                }
-                EnableSecureConnectionCheckBox.setSelected(false);
-            }
-            centre.CurrentData.replace("EnableSecureConnection", String.valueOf(EnableSecureConnectionCheckBox.isSelected()));
-            settingRevised(true);
-        });
-        AutoCheckUpdateCheckBox.addActionListener(e -> {
-            centre.CurrentData.replace("AutoCheckUpdate", String.valueOf(AutoCheckUpdateCheckBox.isSelected()));
-            settingRevised(true);
-        });
+
+
+    private void reFresh() {
+        EnableHardwareAccelerationCheckBox.setSelected(SettingsInfoHandle.getBoolean("EnableHardwareAcceleration", centre.CurrentData));
+        EnableConfirmExitCheckBox.setSelected(SettingsInfoHandle.getBoolean("EnableConfirmExit", centre.CurrentData));
+        ThemeModeComboBox.setSelectedIndex(SettingsInfoHandle.getInt("ThemeMode", centre.CurrentData));
+        EnableHistoryLoaderCheckBox.setSelected(SettingsInfoHandle.getBoolean("EnableHistoryLoader", centre.CurrentData));
+        EnableCursorDisplayCheckBox.setSelected(SettingsInfoHandle.getBoolean("EnableCursorDisplay", centre.CurrentData));
+        MouseMoveOffsetsSlider.setValue((int) SettingsInfoHandle.getDouble("MouseMoveOffsets", centre.CurrentData));
+        StringBuilder stringBuffer = new StringBuilder(MouseMoveLabelPrefix);
+        stringBuffer.insert(MouseMoveLabelPrefix.indexOf(":") + 1, MouseMoveOffsetsSlider.getValue() + "% ");
+        MouseMoveOffsetsLabel.setText(stringBuffer.toString());
+        EnableProxyServerCheckBox.setSelected(SettingsInfoHandle.getBoolean("EnableProxyServer", centre.CurrentData));
+        ProxyServerLabel.setText(ProxyServerPrefix + centre.CurrentData.get("ProxyServer"));
+        EnableSecureConnectionCheckBox.setSelected(SettingsInfoHandle.getBoolean("EnableSecureConnection", centre.CurrentData));
+        AutoCheckUpdateCheckBox.setSelected(SettingsInfoHandle.getBoolean("AutoCheckUpdate", centre.CurrentData));
+        ProxyServerButton.setVisible(EnableProxyServerCheckBox.isSelected());
+        ProxyServerLabel.setVisible(EnableProxyServerCheckBox.isSelected());
     }
 
     //关于界面设置
@@ -1030,22 +1050,6 @@ public class GUIStarter extends JFrame {
 
     }
 
-    private void reFresh() {
-        EnableHardwareAccelerationCheckBox.setSelected(SettingsInfoHandle.getBoolean("EnableHardwareAcceleration", centre.CurrentData));
-        EnableConfirmExitCheckBox.setSelected(SettingsInfoHandle.getBoolean("EnableConfirmExit", centre.CurrentData));
-        EnableHistoryLoaderCheckBox.setSelected(SettingsInfoHandle.getBoolean("EnableHistoryLoader", centre.CurrentData));
-        EnableCursorDisplayCheckBox.setSelected(SettingsInfoHandle.getBoolean("EnableCursorDisplay", centre.CurrentData));
-        MouseMoveOffsetsSlider.setValue((int) SettingsInfoHandle.getDouble("MouseMoveOffsets", centre.CurrentData));
-        StringBuilder stringBuffer = new StringBuilder(MouseMoveLabelPrefix);
-        stringBuffer.insert(MouseMoveLabelPrefix.indexOf(":") + 1, MouseMoveOffsetsSlider.getValue() + "% ");
-        MouseMoveOffsetsLabel.setText(stringBuffer.toString());
-        EnableProxyServerCheckBox.setSelected(SettingsInfoHandle.getBoolean("EnableProxyServer", centre.CurrentData));
-        ProxyServerLabel.setText(ProxyServerPrefix + centre.CurrentData.get("ProxyServer"));
-        EnableSecureConnectionCheckBox.setSelected(SettingsInfoHandle.getBoolean("EnableSecureConnection", centre.CurrentData));
-        AutoCheckUpdateCheckBox.setSelected(SettingsInfoHandle.getBoolean("AutoCheckUpdate", centre.CurrentData));
-        ProxyServerButton.setVisible(EnableProxyServerCheckBox.isSelected());
-        ProxyServerLabel.setVisible(EnableProxyServerCheckBox.isSelected());
-    }
 
     //设置修改
     private void settingRevised(boolean a) {

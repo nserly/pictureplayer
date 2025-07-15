@@ -2,17 +2,21 @@
 # https://docs.gradle.org/current/userguide/platforms.html#sub::toml-dependencies-format
 
 [versions]
-
+com-formdev-flatlaf = "3.6.1"
 com-github-adedayo-intellij-sdk-forms-rt = "142.1"
 com-github-oshi-oshi-core = "6.8.2"
 com-google-code-gson-gson = "2.13.1"
 com-twelvemonkeys-imageio-imageio = "3.12.0"
 net-coobird-thumbnailator = "0.4.20"
-org-apache-logging-log4j-log4j = "2.25.0"
+net-java-dev-jna = "5.17.0"
+org-apache-logging-log4j-log4j = "2.25.1"
 org-projectlombok-lombok = "1.18.38"
 org-slf4j-slf4j-api = "2.0.17"
 
+
 [libraries]
+com-formdev-flatlaf = {module = "com.formdev:flatlaf",version.ref = "com-formdev-flatlaf"}
+com-formdev-flatlaf-extras = {module = "com.formdev:flatlaf-extras",version.ref = "com-formdev-flatlaf"}
 com-github-adedayo-intellij-sdk-forms-rt = { module = "com.github.adedayo.intellij.sdk:forms_rt", version.ref = "com-github-adedayo-intellij-sdk-forms-rt" }
 com-github-oshi-oshi-core = { module = "com.github.oshi:oshi-core", version.ref = "com-github-oshi-oshi-core" }
 com-google-code-gson-gson = { module = "com.google.code.gson:gson", version.ref = "com-google-code-gson-gson" }
@@ -21,6 +25,8 @@ com-twelvemonkeys-imageio-imageio-jpeg = { module = "com.twelvemonkeys.imageio:i
 com-twelvemonkeys-imageio-imageio-tiff = { module = "com.twelvemonkeys.imageio:imageio-tiff", version.ref = "com-twelvemonkeys-imageio-imageio" }
 com-twelvemonkeys-imageio-imageio-webp = { module = "com.twelvemonkeys.imageio:imageio-webp", version.ref = "com-twelvemonkeys-imageio-imageio" }
 net-coobird-thumbnailator = { module = "net.coobird:thumbnailator", version.ref = "net-coobird-thumbnailator" }
+net-java-dev-jna = {module = "net.java.dev.jna:jna",version.ref = "net-java-dev-jna"}
+net-java-dev-jna-platform = {module = "net.java.dev.jna:jna-platform",version.ref = "net-java-dev-jna"}
 org-apache-logging-log4j-log4j-api = { module = "org.apache.logging.log4j:log4j-api", version.ref = "org-apache-logging-log4j-log4j" }
 org-apache-logging-log4j-log4j-core = { module = "org.apache.logging.log4j:log4j-core", version.ref = "org-apache-logging-log4j-log4j" }
 org-apache-logging-log4j-log4j-slf4j2-impl = { module = "org.apache.logging.log4j:log4j-slf4j2-impl", version.ref = "org-apache-logging-log4j-log4j" }
