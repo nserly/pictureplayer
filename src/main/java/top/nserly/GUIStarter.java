@@ -9,9 +9,11 @@ import top.nserly.PicturePlayer.Loading.Init;
 import top.nserly.PicturePlayer.NComponent.Compoent.PaintPicturePanel;
 import top.nserly.PicturePlayer.NComponent.Compoent.ThumbnailPreviewOfImage;
 import top.nserly.PicturePlayer.NComponent.Frame.ConfirmUpdateDialog;
+import top.nserly.PicturePlayer.NComponent.Frame.ExitControlDialog;
 import top.nserly.PicturePlayer.NComponent.Frame.OpenImageChooser;
 import top.nserly.PicturePlayer.NComponent.Frame.ProxyServerChooser;
 import top.nserly.PicturePlayer.NComponent.Listener.ChangeFocusListener;
+import top.nserly.PicturePlayer.NComponent.Listener.ExitControlButtonChoiceListener;
 import top.nserly.PicturePlayer.Settings.SettingsInfoHandle;
 import top.nserly.PicturePlayer.Size.SizeOperate;
 import top.nserly.PicturePlayer.UIManager.FontPreservingUIUpdater;
@@ -23,6 +25,9 @@ import top.nserly.PicturePlayer.Version.DownloadChecker.CheckAndDownloadUpdate;
 import top.nserly.PicturePlayer.Version.PicturePlayerVersion;
 import top.nserly.SoftwareCollections_API.Handler.Exception.ExceptionHandler;
 import top.nserly.SoftwareCollections_API.OSInformation.SystemMonitor;
+import top.nserly.SoftwareCollections_API.String.StringFormation;
+import top.nserly.SoftwareCollections_API.SystemNotifications;
+import top.nserly.SoftwareCollections_API.WindowsAppMutex;
 
 import javax.swing.*;
 import javax.swing.filechooser.FileSystemView;
@@ -36,7 +41,10 @@ import java.awt.dnd.DnDConstants;
 import java.awt.dnd.DropTarget;
 import java.awt.dnd.DropTargetAdapter;
 import java.awt.dnd.DropTargetDropEvent;
-import java.awt.event.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
@@ -47,6 +55,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 @Slf4j
 public class GUIStarter extends JFrame {
@@ -55,7 +64,6 @@ public class GUIStarter extends JFrame {
     public static GUIStarter main;
     private JPanel panel1;
     private JTabbedPane tabbedPane1;
-    private JCheckBox EnableConfirmExitCheckBox;
     private JCheckBox EnableCursorDisplayCheckBox;
     private JCheckBox EnableHistoryLoaderCheckBox;
     private JLabel MouseMoveOffsetsLabel;
@@ -87,7 +95,6 @@ public class GUIStarter extends JFrame {
     private JLabel TotalThread;
     private JLabel DefaultJVMMem;
     private JLabel ProgramStartTime;
-    private static final String[] ThemeComboBoxStringItems = new String[]{"Theme_0", "Theme_1", "Theme_2"};
     private JLabel CPUName;
     private JLabel JavaPath;
     private JCheckBox EnableHardwareAccelerationCheckBox;
@@ -97,9 +104,10 @@ public class GUIStarter extends JFrame {
     private JLabel Display_2nd;
     private JLabel Display_3rd;
     private JButton FreeUpMemory;
+    private static final String[] ThemeComboBoxStringItems = new String[]{"Theme_0", "Theme_1", "Theme_2"};
+    private static final String[] CloseMainFrameControlComboBoxStringItems = new String[]{"CloseMainFrameControl_0", "CloseMainFrameControl_1", "CloseMainFrameControl_2"};
     private static final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
     private static ScheduledFuture<?> future;
-
     private final ChangeFocusListener changeFocusListener;
     //是否启用代理服务器
     private static boolean EnableProxyServer;
@@ -113,8 +121,9 @@ public class GUIStarter extends JFrame {
     private boolean IsFreshen;
     private static final File REPEAT_PICTURE_PATH_LOGOTYPE = new File("???");
     private static ProxyServerChooser proxyServerChooser;
-
     private final TreeMap<String, ThumbnailPreviewOfImage> thumbnailPreviewOfImages = new TreeMap<>();
+    private static MenuItem[] SystemTrayMenuItems;
+    private static SystemTray systemTray;
     private final MouseAdapter mouseAdapter = new MouseAdapter() {
         public void mouseClicked(MouseEvent e) {
             if (e.getButton() == MouseEvent.BUTTON1) {
@@ -123,19 +132,10 @@ public class GUIStarter extends JFrame {
         }
     };
     public PaintPicturePanel paintPicture;
+
+    private static WindowsAppMutex windowsAppMutex;
+
     private JLabel BuildView;
-    private JLabel ThemeModeLabel;
-
-    static {
-        //初始化Init
-        init = new Init<>();
-        init.setUpdate(true);
-        ExceptionHandler.setUncaughtExceptionHandler(log);
-        log.info("The software starts running...");
-        System.setProperty("sun.java2d.opengl", "true");
-    }
-
-    private static Method $$$cachedGetBundleMethod$$$ = null;
 
     //打开图片
     public void openPicture(String path) {
@@ -164,9 +164,9 @@ public class GUIStarter extends JFrame {
     }
 
     private JComboBox<String> ThemeModeComboBox;
+    private JLabel ThemeModeLabel;
     private final Thread init_PaintPicture = new Thread(() -> {
         paintPicture = new PaintPicturePanel();
-
     });
 
     public GUIStarter(String title) {
@@ -194,7 +194,6 @@ public class GUIStarter extends JFrame {
             paintPicture.pictureInformationStorageManagement.optimize();
         }).start();
         changeFocusListener = new ChangeFocusListener(this);
-        init.run();
         new Thread(() -> {
             ExceptionHandler.setUncaughtExceptionHandler(log);
             ProxyServerPrefix = ProxyServerLabel.getText();
@@ -232,19 +231,81 @@ public class GUIStarter extends JFrame {
         PaintPicturePanel.isEnableHardwareAcceleration = Boolean.parseBoolean(init.getProperties().getProperty("EnableHardwareAcceleration")) && GetImageInformation.isHardwareAccelerated;
     }
 
-    public static void main(String[] args) throws IOException, InterruptedException {
-        UIManager.getUIManager().setTheme(SettingsInfoHandle.getInt("ThemeMode", init.getProperties()));
-        UIManager.getUIManager().applyThemeOnSetAndRefreshWindows();
-        main = new GUIStarter("Picture Player(Version:" + PicturePlayerVersion.getVersion() + ")");
-        new Thread(() -> {
-            for (String arg : args) {
-                if (GetImageInformation.isImageFile(new File(arg))) {
-                    main.openPicture(arg);
+    private JComboBox<String> CloseMainFrameControlComboBox;
+
+    static {
+        //初始化Init
+        init = new Init<>();
+        init.setUpdate(true);
+        ExceptionHandler.setUncaughtExceptionHandler(log);
+        log.info("The software starts running...");
+        System.setProperty("sun.java2d.opengl", "true");
+        System.setProperty("file.encoding", "UTF-8");
+        System.setProperty("SoftwareName", "PicturePlayer");
+        log.info("SoftwareName:{}", System.getProperty("SoftwareName"));
+        initSystemTrayMenuItems();
+    }
+
+    private static Method $$$cachedGetBundleMethod$$$ = null;
+
+    private static void initSystemTrayMenuItems() {
+        MenuItem open = new MenuItem(Bundle.getMessage("SystemTrayMenu_Open"));
+        MenuItem display = new MenuItem(Bundle.getMessage("SystemTrayMenu_Display"));
+        MenuItem settings = new MenuItem(Bundle.getMessage("SystemTrayMenu_Settings"));
+        MenuItem about = new MenuItem(Bundle.getMessage("SystemTrayMenu_About"));
+        MenuItem checkUpdate = new MenuItem(Bundle.getMessage("SystemTrayMenu_CheckUpdate"));
+        MenuItem exit = new MenuItem(Bundle.getMessage("SystemTrayMenu_Exit"));
+        open.addActionListener(e -> {
+            GUIStarter.main.setVisible(true);
+            GUIStarter.main.tabbedPane1.setSelectedIndex(0);
+        });
+        display.addActionListener(e -> {
+            GUIStarter.main.setVisible(true);
+            GUIStarter.main.tabbedPane1.setSelectedIndex(1);
+        });
+        settings.addActionListener(e -> {
+            GUIStarter.main.setVisible(true);
+            GUIStarter.main.tabbedPane1.setSelectedIndex(2);
+        });
+        about.addActionListener(e -> {
+            GUIStarter.main.setVisible(true);
+            GUIStarter.main.tabbedPane1.setSelectedIndex(3);
+        });
+        checkUpdate.addActionListener(e -> {
+            CheckAndDownloadUpdate downloadUpdate = new CheckAndDownloadUpdate(UPDATE_WEBSITE);
+            new Thread(() -> {
+                ExceptionHandler.setUncaughtExceptionHandler(log);
+
+
+                try {
+                    if (!downloadUpdate.checkIfTheLatestVersion()) {
+                        SystemNotifications.sendMessage(SystemNotifications.DefaultIcon,
+                                Bundle.getMessage("NoAnyUpdate_Title"),
+                                Bundle.getMessage("NoAnyUpdate_Content_First"),
+                                TrayIcon.MessageType.INFO);
+                        return;
+                    }
+                } catch (IOException e1) {
+                    log.error(ExceptionHandler.getExceptionMessage(e1));
+                    SystemNotifications.sendMessage(SystemNotifications.DefaultIcon,
+                            Bundle.getMessage("CantGetUpdate_Title"),
+                            "Error: " + e1 + "\n" + Bundle.getMessage("CantGetUpdate_Content"),
+                            TrayIcon.MessageType.ERROR);
                     return;
                 }
-            }
-        }).start();
-        extractedSystemInfoToLog();
+
+                new Thread(() -> {
+                    ExceptionHandler.setUncaughtExceptionHandler(log);
+                    UpdateForm(downloadUpdate);
+                }).start();
+            }).start();
+        });
+        exit.addActionListener(e -> {
+            GUIStarter.exitAndRecord();
+        });
+        SystemTrayMenuItems = new MenuItem[]{
+                open, display, settings, about, checkUpdate, exit
+        };
     }    private final DropTargetAdapter dropTargetAdapter = new DropTargetAdapter() {
         public void drop(DropTargetDropEvent dtde) {
             try {
@@ -315,6 +376,61 @@ public class GUIStarter extends JFrame {
         }
     }
 
+    public static void main(String[] args) throws InterruptedException {
+        String classPath = System.getProperty("java.class.path");
+        if (classPath == null || classPath.isBlank()) {
+            System.setProperty("java.home", ".");
+        }
+        AtomicReference<String> openingFilePath = new AtomicReference<>();
+        Thread pictureFileThread = null;
+        if (args.length > 0) {
+            pictureFileThread = new Thread(() -> {
+                for (String arg : args) {
+                    if (GetImageInformation.isImageFile(new File(arg))) {
+                        openingFilePath.set(arg);
+                        return;
+                    }
+                }
+            });
+            pictureFileThread.start();
+        }
+        windowsAppMutex = new WindowsAppMutex(22357);
+        // 尝试创建互斥体
+        final boolean isFirstInstance = windowsAppMutex.isFirstInstance();
+
+        if (!isFirstInstance) {
+            windowsAppMutex.sendSoftwareVisibleDirectiveToExistingInstance(true);
+            // 发送参数到已有实例
+            if (pictureFileThread != null) {
+                pictureFileThread.join();
+                try {
+                    if (openingFilePath.get() != null && !openingFilePath.get().isBlank()) {
+                        windowsAppMutex.sendFilePathToExistingInstance(openingFilePath.get());
+                    }
+                } catch (Exception e) {
+                    log.error(ExceptionHandler.getExceptionMessage(e));
+                }
+            }
+            exitAndRecord();
+        }
+
+        init.run();
+        UIManager.getUIManager().setTheme(SettingsInfoHandle.getInt("ThemeMode", init.getProperties()));
+        UIManager.getUIManager().applyThemeOnSetAndRefreshWindows();
+        main = new GUIStarter("Picture Player(Version:" + PicturePlayerVersion.getVersion() + ")");
+        windowsAppMutex.addGetFilePathFromCreatingInstanceAction(e -> {
+            main.openPicture(e);
+        });
+        windowsAppMutex.addReceiveSoftwareVisibleDirective(e -> {
+            main.setVisible(e);
+        });
+        if (openingFilePath.get() != null && !openingFilePath.get().isBlank()) {
+            main.openPicture(openingFilePath.get());
+        }
+        goToSystemTray();
+        extractedSystemInfoToLog();
+    }
+
     //关闭
     public static void close() {
         if (GUIStarter.main.getTitle().contains("*")) {
@@ -322,106 +438,69 @@ public class GUIStarter extends JFrame {
             if (choose == JOptionPane.YES_OPTION) {
                 log.info("Saving Settings...");
                 GUIStarter.main.centre.save();
-                closeInformation();
-                log.info("Program Termination!");
-                System.exit(0);
-            } else if (choose == JOptionPane.NO_OPTION) {
-                closeInformation();
-                log.info("Program Termination!");
-                System.exit(0);
-            } else {
+            } else if (choose != JOptionPane.NO_OPTION) {
                 return;
             }
         }
 
-        //加载配置文件
-        init.loading();
-        if (init.getProperties().get("EnableConfirmExit") != null && init.getProperties().get("EnableConfirmExit").toString().equalsIgnoreCase("false")) {
-            closeInformation();
-            log.info("Program Termination!");
-            System.exit(0);
-        }
-        //设置消息对话框面板
-        var jDialog = new JDialog(main, true);
-        //设置面板标题
-        jDialog.setTitle(Bundle.getMessage("DefaultWindowClose_Title"));
-        //设置面板大小（获取父面板坐标）
-        jDialog.setSize(260, 170);
-        jDialog.setLocation(WindowLocation.componentCenter(main, jDialog.getWidth(), jDialog.getHeight()));
-        //创建文字
-        var jLabel1 = new JLabel(Bundle.getMessage("DefaultWindowClose_Content"));
-        //设置文字字体、格式
-        jLabel1.setFont(new Font("微软雅黑", Font.PLAIN, 15));
-        //设置显示大小、坐标
-        jLabel1.setBounds(15, 3, 290, 50);
-        //创建按钮
-        var yes = new JButton(Bundle.getMessage("DefaultWindowClose_EXIT"));
-        var no = new JButton(Bundle.getMessage("DefaultWindowClose_Cancel"));
-        yes.setBounds(20, 50, 100, 35);
-        yes.setForeground(Color.RED);
-        no.setBounds(130, 50, 100, 35);
-        jDialog.setResizable(false);
-        //设置布局
-        jDialog.setLayout(null);
-        //将文字、按钮放入组件中
-        jDialog.add(jLabel1);
-        jDialog.add(yes);
-        jDialog.add(no);
-        ChangeFocusListener changeFocusListener = new ChangeFocusListener(jDialog);
-        JCheckBox jCheckBox = new JCheckBox(Bundle.getMessage("DefaultWindowClose_Under"));
-        jCheckBox.setBounds(60, 95, 200, 25);
-        jCheckBox.addMouseListener(changeFocusListener);
-        jDialog.add(jCheckBox);
-        //如果确定退出软件，运行退出程序
-        yes.addActionListener(e1 -> {
-            //关闭面板
-            main.dispose();
-            closeInformation();
-            if (jCheckBox.isSelected()) {
-                init.changeValue("EnableConfirmExit", "false");
-                init.update();
+        switch (SettingsInfoHandle.getInt("CloseMainFrameControl", init.getProperties())) {
+            //直接退出
+            case 1 -> {
+                exitAndRecord();
+                return;
             }
-            log.info("Program Termination!");
-            System.exit(0);
-        });
-        yes.addMouseListener(changeFocusListener);
-        //点击取消以询问隐藏面板（不会退出程序）
-        no.addActionListener(e1 -> {
-            jDialog.setVisible(false);
-        });
-        no.addMouseListener(changeFocusListener);
-        //面板键盘监听器
-        jDialog.addKeyListener(new KeyAdapter() {
-            @Override
-            public void keyPressed(KeyEvent e) {
-                if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
-                    jDialog.setVisible(false);
-                } else if (e.getKeyCode() == KeyEvent.VK_ENTER) {
-                    //关闭面板
-                    main.dispose();
-                    //判断paintPicture是否为null值（以防止出现空指针异常）
-                    if (PaintPicturePanel.paintPicture != null && PaintPicturePanel.paintPicture.sizeOperate != null)
-                        PaintPicturePanel.paintPicture.sizeOperate.close();
-                    if (main != null) main.dispose();
-                    if (jCheckBox.isSelected()) {
-                        init.changeValue("EnableConfirmExit", "false");
-                        init.update();
+            //最小化到系统托盘
+            case 2 -> {
+                log.info("Minimized to the system tray");
+                GUIStarter.main.dispose();
+                System.gc();
+                return;
+            }
+        }
+
+        //设置消息对话框面板
+        var exitControlDialog = new ExitControlDialog(main, true);
+        exitControlDialog.setExitControlButtonChoiceListener(((choice, doNotAppear) -> {
+            if (choice == ExitControlButtonChoiceListener.EXIT_CANCEL) return;
+            switch (choice) {
+                case ExitControlButtonChoiceListener.EXIT_DIRECTLY -> {
+                    if (doNotAppear) {
+                        GUIStarter.main.centre.CurrentData.replace("CloseMainFrameControl", "1");
+                        GUIStarter.main.centre.save();
+                        GUIStarter.main.CloseMainFrameControlComboBox.setSelectedIndex(1);
                     }
-                    log.info("Program Termination!");
-                    System.exit(0);
+                    exitAndRecord();
+                }
+                case ExitControlButtonChoiceListener.EXIT_TO_SYSTEM_TRAY -> {
+                    if (doNotAppear) {
+                        GUIStarter.main.centre.CurrentData.replace("CloseMainFrameControl", "2");
+                        GUIStarter.main.centre.save();
+                        GUIStarter.main.CloseMainFrameControlComboBox.setSelectedIndex(2);
+                    }
+                    log.info("Minimized to the system tray");
+                    GUIStarter.main.dispose();
+                    System.gc();
                 }
             }
-        });
-        //设置面板在显示时自动获取焦点
-        jDialog.addWindowListener(new WindowAdapter() {
-            @Override
-            public void windowActivated(WindowEvent e) {
-                //当前面板成为活动面板时，让myCanvas获取焦点
-                jDialog.requestFocus();
+
+        }));
+        exitControlDialog.setVisible(true);
+    }
+
+    public static void exitAndRecord() {
+        closeInformation();
+        windowsAppMutex.close();
+        log.info("Program Termination!");
+        System.exit(0);
+    }
+
+    private static void goToSystemTray() {
+        if (systemTray != null) return;
+        systemTray = SystemNotifications.getSystemTray(SystemNotifications.DefaultIcon, SystemTrayMenuItems, e -> {
+            if (e.getClickCount() == 2) {
+                GUIStarter.main.setVisible(true);
             }
         });
-        //显示面板
-        jDialog.setVisible(true);
     }
 
     //初始化所有组件设置
@@ -554,7 +633,16 @@ public class GUIStarter extends JFrame {
 
     //更新界面
     public static void UpdateForm(CheckAndDownloadUpdate downloadUpdate) {
+        StringFormation stringFormation_title = new StringFormation(Bundle.getMessage("FindUpdateTitle"));
+        stringFormation_title.add("version", PicturePlayerVersion.getVersion());
+        stringFormation_title.add("version", downloadUpdate.NewVersionName);
+        stringFormation_title.add("versionID", String.valueOf(downloadUpdate.NewVersionID));
+        SystemNotifications.sendMessage(SystemNotifications.DefaultIcon,
+                stringFormation_title.getProcessingString(),
+                Bundle.getMessage("SystemTrayMenu_FindNewVersionContent"),
+                TrayIcon.MessageType.INFO);
         ConfirmUpdateDialog confirmUpdateDialog = new ConfirmUpdateDialog(downloadUpdate);
+        confirmUpdateDialog.pack();
         confirmUpdateDialog.setVisible(true);
     }
 
@@ -685,10 +773,6 @@ public class GUIStarter extends JFrame {
         final JPanel panel3 = new JPanel();
         panel3.setLayout(new GridLayoutManager(11, 2, new Insets(0, 0, 0, 0), -1, -1));
         scrollPane2.setViewportView(panel3);
-        EnableConfirmExitCheckBox = new JCheckBox();
-        EnableConfirmExitCheckBox.setRequestFocusEnabled(false);
-        this.$$$loadButtonText$$$(EnableConfirmExitCheckBox, this.$$$getMessageFromBundle$$$("messages", "EnableConfirmExit"));
-        panel3.add(EnableConfirmExitCheckBox, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(402, 25), null, 0, false));
         EnableHistoryLoaderCheckBox = new JCheckBox();
         EnableHistoryLoaderCheckBox.setRequestFocusEnabled(false);
         this.$$$loadButtonText$$$(EnableHistoryLoaderCheckBox, this.$$$getMessageFromBundle$$$("messages", "EnableHistoryLoader"));
@@ -739,6 +823,11 @@ public class GUIStarter extends JFrame {
         ThemeModeComboBox.setModel(defaultComboBoxModel1);
         ThemeModeComboBox.setRequestFocusEnabled(false);
         panel3.add(ThemeModeComboBox, new GridConstraints(1, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        final JLabel label1 = new JLabel();
+        this.$$$loadLabelText$$$(label1, this.$$$getMessageFromBundle$$$("messages", "Settings_ExitControlLabel"));
+        panel3.add(label1, new GridConstraints(0, 0, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_NONE, GridConstraints.SIZEPOLICY_FIXED, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+        CloseMainFrameControlComboBox = new JComboBox();
+        panel3.add(CloseMainFrameControlComboBox, new GridConstraints(0, 1, 1, 1, GridConstraints.ANCHOR_WEST, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         final JScrollPane scrollPane3 = new JScrollPane();
         tabbedPane1.addTab(this.$$$getMessageFromBundle$$$("messages", "FourthPanel"), scrollPane3);
         FourthPanel = new JPanel();
@@ -825,7 +914,7 @@ public class GUIStarter extends JFrame {
         if (FreeUpMemoryFont != null) FreeUpMemory.setFont(FreeUpMemoryFont);
         FreeUpMemory.setRequestFocusEnabled(false);
         FreeUpMemory.setRolloverEnabled(false);
-        FreeUpMemory.setText("释放内存");
+        this.$$$loadButtonText$$$(FreeUpMemory, this.$$$getMessageFromBundle$$$("messages", "FreeUpMemory"));
         FourthPanel.add(FreeUpMemory, new GridConstraints(9, 0, 1, 7, GridConstraints.ANCHOR_CENTER, GridConstraints.FILL_HORIZONTAL, GridConstraints.SIZEPOLICY_CAN_SHRINK | GridConstraints.SIZEPOLICY_CAN_GROW, GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         TopLabel = new JLabel();
         Font TopLabelFont = this.$$$getFont$$$(null, -1, 20, TopLabel.getFont());
@@ -862,6 +951,9 @@ public class GUIStarter extends JFrame {
         for (String i : ThemeComboBoxStringItems) {
             ThemeModeComboBox.addItem(Bundle.getMessage(i));
         }
+        for (String i : CloseMainFrameControlComboBoxStringItems) {
+            CloseMainFrameControlComboBox.addItem(Bundle.getMessage(i));
+        }
         reFresh();
         ThemeModeComboBox.addItemListener(e -> {
             centre.CurrentData.replace("ThemeMode", String.valueOf(ThemeModeComboBox.getSelectedIndex()));
@@ -869,11 +961,10 @@ public class GUIStarter extends JFrame {
                     .getSelectedIndex());
             UIManager.getUIManager().applyThemeOnSetAndRefreshWindows();
             FontPreservingUIUpdater.updateComponentTreeUIWithFontPreservation(paintPicture);
-            FontPreservingUIUpdater.updateComponentTreeUIWithFontPreservation(paintPicture.fullScreenWindow);
             settingRevised(true);
         });
-        EnableConfirmExitCheckBox.addActionListener(e -> {
-            centre.CurrentData.replace("EnableConfirmExit", String.valueOf(EnableConfirmExitCheckBox.isSelected()));
+        CloseMainFrameControlComboBox.addItemListener(e -> {
+            centre.CurrentData.replace("CloseMainFrameControl", String.valueOf(CloseMainFrameControlComboBox.getSelectedIndex()));
             settingRevised(true);
         });
         EnableHistoryLoaderCheckBox.addActionListener(e -> {
@@ -1001,8 +1092,8 @@ public class GUIStarter extends JFrame {
 
     private void reFresh() {
         EnableHardwareAccelerationCheckBox.setSelected(SettingsInfoHandle.getBoolean("EnableHardwareAcceleration", centre.CurrentData));
-        EnableConfirmExitCheckBox.setSelected(SettingsInfoHandle.getBoolean("EnableConfirmExit", centre.CurrentData));
         ThemeModeComboBox.setSelectedIndex(SettingsInfoHandle.getInt("ThemeMode", centre.CurrentData));
+        CloseMainFrameControlComboBox.setSelectedIndex(SettingsInfoHandle.getInt("CloseMainFrameControl", centre.CurrentData));
         EnableHistoryLoaderCheckBox.setSelected(SettingsInfoHandle.getBoolean("EnableHistoryLoader", centre.CurrentData));
         EnableCursorDisplayCheckBox.setSelected(SettingsInfoHandle.getBoolean("EnableCursorDisplay", centre.CurrentData));
         MouseMoveOffsetsSlider.setValue((int) SettingsInfoHandle.getDouble("MouseMoveOffsets", centre.CurrentData));
@@ -1016,6 +1107,7 @@ public class GUIStarter extends JFrame {
         ProxyServerButton.setVisible(EnableProxyServerCheckBox.isSelected());
         ProxyServerLabel.setVisible(EnableProxyServerCheckBox.isSelected());
     }
+
 
     //关于界面设置
     private void about() {

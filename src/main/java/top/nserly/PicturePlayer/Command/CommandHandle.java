@@ -1,6 +1,7 @@
 package top.nserly.PicturePlayer.Command;
 
 import lombok.extern.slf4j.Slf4j;
+import top.nserly.GUIStarter;
 import top.nserly.PicturePlayer.Version.DownloadChecker.CheckAndDownloadUpdate;
 import top.nserly.SoftwareCollections_API.Handler.Exception.ExceptionHandler;
 import top.nserly.SoftwareCollections_API.String.RandomString;
@@ -131,7 +132,7 @@ public class CommandHandle {
         Runtime.getRuntime().exec(new String[]{"runnable.bat"});
         log.info("Program Termination!");
 
-        System.exit(0);
+        GUIStarter.exitAndRecord();
     }
 
     public static void createAndRunLinuxShellScript(String DownloadFilePath) throws IOException {
@@ -154,7 +155,7 @@ public class CommandHandle {
         log.info("Start running the script file and end the current software...");
         Runtime.getRuntime().exec(new String[]{"sh", "-c", "nohup sh ./replace.sh &"});
         log.info("Program Termination!");
-        System.exit(0);
+        GUIStarter.exitAndRecord();
     }
 
 }

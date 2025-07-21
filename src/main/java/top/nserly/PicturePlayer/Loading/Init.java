@@ -83,15 +83,6 @@ public class Init<KEY, VALUE> {
         return properties.containsKey(key);
     }
 
-    public void loading() {
-        if (!isInit.get()) init();
-        try {
-            properties.load(new BufferedReader(new FileReader(f)));
-        } catch (IOException e) {
-            logger.error("Failed to read the configuration file");
-        }
-    }
-
     public void setUpdate(boolean EnableAutoUpdate) {
         this.EnableAutoUpdate = EnableAutoUpdate;
     }
@@ -149,7 +140,7 @@ public class Init<KEY, VALUE> {
         if (!isInit.get()) init();
         try {
             properties.store(new BufferedWriter(new FileWriter(f)), "");
-        } catch (IOException e) {
+        } catch (Exception e) {
             logger.error("Failed to save the configuration file");
         }
     }

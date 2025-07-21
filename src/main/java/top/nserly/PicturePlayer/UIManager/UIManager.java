@@ -11,6 +11,7 @@ import top.nserly.SoftwareCollections_API.Handler.Exception.ExceptionHandler;
 
 import javax.swing.*;
 import java.awt.*;
+import java.util.List;
 
 @Setter
 @Slf4j
@@ -48,10 +49,25 @@ public abstract class UIManager {
     //更新所有窗体
     public synchronized static void updateAllWindows() {
         for (Window window : Window.getWindows()) {
-            if (window instanceof JFrame && window.isShowing()) {
+            if (window.isShowing()) {
                 window.dispose();
                 FontPreservingUIUpdater.updateComponentTreeUIWithFontPreservation(window);
                 window.setVisible(true);
+                continue;
+            }
+            FontPreservingUIUpdater.updateComponentTreeUIWithFontPreservation(window);
+        }
+    }
+
+    //更新所有所选窗体
+    public synchronized static void updateChoiceWindows(List<Window> windowsCollections) {
+        for (Window window : windowsCollections) {
+            if (window.isShowing()) {
+                window.dispose();
+                FontPreservingUIUpdater.updateComponentTreeUIWithFontPreservation(window);
+                window.setVisible(true);
+            } else {
+                FontPreservingUIUpdater.updateComponentTreeUIWithFontPreservation(window);
             }
         }
     }
