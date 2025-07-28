@@ -17,6 +17,6 @@ public class PicturePlayerVersion {
     @Getter
     private static final String VersionID = "1315";
     @Getter
-    private static final String BuildVersion = "Build2025.07.23.450905";
+    private static final String BuildVersion = "Build2025.07.29.195127";
 
 }

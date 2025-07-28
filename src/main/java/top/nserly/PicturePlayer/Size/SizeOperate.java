@@ -3,10 +3,9 @@ package top.nserly.PicturePlayer.Size;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import top.nserly.PicturePlayer.NComponent.Compoent.PaintPicturePanel;
-import top.nserly.PicturePlayer.Utils.ImageManager.Info.GetPictureSize;
+import top.nserly.SoftwareCollections_API.Interaction.SystemInteraction.Screen.ScreenManager;
 
 import java.awt.*;
-import java.io.IOException;
 
 public class SizeOperate {
     //默认缩放比例
@@ -30,26 +29,24 @@ public class SizeOperate {
     //最适合的调节比例
     private int AdjustPercent;
     //图片信息类
-    private GetPictureSize getPictureSize;
+    private Dimension PictureSize;
     //屏幕分辨率
-    public static final Dimension ScreenSize = Toolkit.getDefaultToolkit().getScreenSize();
+    public static final Dimension ScreenSize;
     //可用屏幕尺寸
     public static final Dimension FreeOfScreenSize;
     private static final Logger logger = LoggerFactory.getLogger(SizeOperate.class);
 
     static {
+        //获取屏幕分辨率
+        //注意：此处获取的是主屏幕的分辨率，如果有多屏幕环境，可能需要根据实际情况调整
+        //如果使用JNA或其他库获取屏幕信息，请确保已正确配置相关依赖
+        ScreenSize = ScreenManager.getPrimaryScreen().getScreenSize();
         //获取可用屏幕分辨率
-        GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
-        GraphicsDevice gd = ge.getDefaultScreenDevice();
-
-        int width = gd.getDisplayMode().getWidth();
-        int height = gd.getDisplayMode().getHeight();
-        if (System.getProperty("os.name").toLowerCase().contains("windows")) {
-            height -= 45;
-        }
-
-        FreeOfScreenSize = new Dimension(width, height);
-
+        //可用屏幕分辨率通常是指不包括任务栏等占用的区域
+        //如果有多屏幕环境，可能需要根据实际情况调整
+        //注意：此处获取的是主屏幕的可用分辨率，如果有多屏幕环境，可能需要根据实际情况调整
+        //如果使用JNA或其他库获取屏幕信息，请确保已正确配置相关依赖
+        FreeOfScreenSize = ScreenManager.getPrimaryScreen().getUsableScreenSize();
     }
 
     public SizeOperate(PaintPicturePanel.ImageCanvas imageCanvas, Dimension Component) {
@@ -69,13 +66,9 @@ public class SizeOperate {
     public void changeCanvas(PaintPicturePanel.ImageCanvas imageCanvas) {
         this.imageCanvas = imageCanvas;
         if (imageCanvas.getPath() != null) {
-            try {
-                getPictureSize = new GetPictureSize(imageCanvas.getPath());
-                if (Component != null) {
-                    AdjustPercent = (int) (((Math.abs(Component.getHeight() - getPictureSize.height) / 5.5 / getPictureSize.height) + (Math.abs(Component.getWidth() - getPictureSize.width) / 5.5 / getPictureSize.width)) / 2);
-                }
-            } catch (IOException e) {
-                logger.error("Could not read picture information: {}", String.valueOf(e));
+            PictureSize = new Dimension(imageCanvas.getImageWidth(), imageCanvas.getImageHeight());
+            if (Component != null) {
+                AdjustPercent = (int) (((Math.abs(Component.getHeight() - PictureSize.height) / 5.5 / PictureSize.height) + (Math.abs(Component.getWidth() - PictureSize.width) / 5.5 / PictureSize.width)) / 2);
             }
         }
         FittestPercent = getPictureOptimalSize();
@@ -103,13 +96,13 @@ public class SizeOperate {
         if (window != null) {
             this.Component = window;
             FittestPercent = getPictureOptimalSize();
-            if (getPictureSize == null && imageCanvas != null)
+            if (PictureSize == null && imageCanvas != null)
                 try {
-                    getPictureSize = new GetPictureSize(imageCanvas.getPath());
+                    PictureSize = new Dimension(imageCanvas.getImageWidth(), imageCanvas.getImageHeight());
                 } catch (Exception e) {
                     return;
                 }
-            AdjustPercent = (int) (((Math.abs(window.getHeight() - getPictureSize.height) / 5.5 / getPictureSize.height) + (Math.abs(window.getWidth() - getPictureSize.width) / 5.5 / getPictureSize.width)) / 2);
+            AdjustPercent = (int) (((Math.abs(window.getHeight() - PictureSize.height) / 5.5 / PictureSize.height) + (Math.abs(window.getWidth() - PictureSize.width) / 5.5 / PictureSize.width)) / 2);
         }
     }
 

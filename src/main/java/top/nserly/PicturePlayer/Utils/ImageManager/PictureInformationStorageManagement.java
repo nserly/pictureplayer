@@ -6,10 +6,8 @@ import top.nserly.PicturePlayer.Utils.ImageManager.Info.GetImageInformation;
 import top.nserly.SoftwareCollections_API.Handler.Exception.ExceptionHandler;
 import top.nserly.SoftwareCollections_API.String.RandomString;
 
-import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.File;
-import java.io.IOException;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Map;
@@ -89,8 +87,8 @@ public class PictureInformationStorageManagement implements Serializable {
         pictureInformation.add(savePath.getPath());
 
         try {
-            BufferedImage bufferedImage = getImage(originalPicturePath);
-            writeImage(bufferedImage, savePath.getPath(), saveType);
+            BufferedImage bufferedImage = GetImageInformation.getImage(originalPicturePath);
+            GetImageInformation.writeImage(bufferedImage, savePath.getPath(), saveType);
             pictureInformation.add(GetImageInformation.getHashcode(savePath));
             treeMap.put(originalPicturePath, pictureInformation);
             bufferedImage.flush();
@@ -176,26 +174,5 @@ public class PictureInformationStorageManagement implements Serializable {
         File file = new File(filePath);
         if (!file.exists()) return false;
         return Objects.equals(GetImageInformation.getHashcode(file), hashcode);
-    }
-
-    //获取图片Image对象
-    public static BufferedImage getImage(String path) {
-        BufferedImage bufferedImage;
-        try {
-            bufferedImage = ImageIO.read(new File(path));
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-        return bufferedImage;
-    }
-
-    //写入图片
-    public static void writeImage(BufferedImage image, String path, String type) {
-        File file = new File(path);
-        try {
-            ImageIO.write(image, type, file);
-        } catch (IOException e) {
-            log.error(ExceptionHandler.getExceptionMessage(e));
-        }
     }
 }

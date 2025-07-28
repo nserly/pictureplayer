@@ -24,10 +24,10 @@ import top.nserly.PicturePlayer.Utils.Window.WindowLocation;
 import top.nserly.PicturePlayer.Version.DownloadChecker.CheckAndDownloadUpdate;
 import top.nserly.PicturePlayer.Version.PicturePlayerVersion;
 import top.nserly.SoftwareCollections_API.Handler.Exception.ExceptionHandler;
+import top.nserly.SoftwareCollections_API.Interaction.SoftwareInteraction.SoftwareChannel.SystemNotifications;
+import top.nserly.SoftwareCollections_API.Interaction.SoftwareInteraction.SoftwareChannel.WindowsAppMutex;
 import top.nserly.SoftwareCollections_API.OSInformation.SystemMonitor;
 import top.nserly.SoftwareCollections_API.String.StringFormation;
-import top.nserly.SoftwareCollections_API.SystemNotifications;
-import top.nserly.SoftwareCollections_API.WindowsAppMutex;
 
 import javax.swing.*;
 import javax.swing.filechooser.FileSystemView;
@@ -131,43 +131,127 @@ public class GUIStarter extends JFrame {
             }
         }
     };
+
     public PaintPicturePanel paintPicture;
 
     private static WindowsAppMutex windowsAppMutex;
 
     private JLabel BuildView;
 
-    //打开图片
-    public void openPicture(String path) {
-        textField1.setText(path);
-        new Thread(() -> {
-            if (path == null || path.endsWith("???")) return;
-            try {
-                init_PaintPicture.join();
-            } catch (InterruptedException ignored) {
-
-            }
-            if (paintPicture.imageCanvas == null || paintPicture.imageCanvas.getPath() == null) {
-                tabbedPane1.setComponentAt(1, paintPicture);
-                new DropTarget(paintPicture, DnDConstants.ACTION_COPY_OR_MOVE, dropTargetAdapter, true);
-            }
-            try {
-                SwingUtilities.invokeAndWait(() -> {
-                    paintPicture.setSize(tabbedPane1.getSize());
-                    paintPicture.changePicturePath(path);
-                    tabbedPane1.setSelectedIndex(1);
-                });
-            } catch (InterruptedException | InvocationTargetException e) {
-                log.error(ExceptionHandler.getExceptionMessage(e));
-            }
-        }).start();
-    }
-
     private JComboBox<String> ThemeModeComboBox;
     private JLabel ThemeModeLabel;
     private final Thread init_PaintPicture = new Thread(() -> {
         paintPicture = new PaintPicturePanel();
     });
+
+    private static Method $$$cachedGetBundleMethod$$$ = null;
+
+    static {
+        ExceptionHandler.setUncaughtExceptionHandler(log);
+        //初始化Init
+        init = new Init<>();
+        init.setUpdate(true);
+        log.info("The software starts running...");
+        System.setProperty("sun.java2d.opengl", "true");
+        System.setProperty("file.encoding", "UTF-8");
+        System.setProperty("SoftwareName", "PicturePlayer");
+        log.info("SoftwareName:{}", System.getProperty("SoftwareName"));
+    }    private final DropTargetAdapter dropTargetAdapter = new DropTargetAdapter() {
+        public void drop(DropTargetDropEvent dtde) {
+            try {
+                dtde.acceptDrop(DnDConstants.ACTION_COPY);
+                Transferable transferable = dtde.getTransferable();
+                if (transferable.isDataFlavorSupported(DataFlavor.javaFileListFlavor)) {
+                    Object obj = transferable.getTransferData(DataFlavor.javaFileListFlavor);
+                    List<File> files = null;
+                    if (!(obj instanceof List<?>)) {
+                        throw new ClassCastException("Can't convert object:" + obj + "to object List<File>");
+                    }
+                    files = (List<File>) obj;
+                    File file = checkFileOpen(files);
+                    if (file != null) {
+                        openPicture(file.getPath());
+                    }
+                }
+            } catch (IOException | UnsupportedFlavorException e) {
+                log.error(ExceptionHandler.getExceptionMessage(e));
+            }
+        }
+    };
+
+    private JComboBox<String> CloseMainFrameControlComboBox;
+
+    public static void main(String[] args) throws InterruptedException {
+        Thread pictureFileThread = null;
+        AtomicReference<String> openingFilePath = new AtomicReference<>();
+        if (args.length > 0) {
+            pictureFileThread = new Thread(() -> {
+                for (String arg : args) {
+                    if (GetImageInformation.isImageFile(new File(arg))) {
+                        openingFilePath.set(arg);
+                        return;
+                    }
+                }
+            });
+            pictureFileThread.start();
+        }
+
+        windowsAppMutex = new WindowsAppMutex(22357);
+        boolean isNUpdate = "true".equals(System.getProperty("NUpdate"));
+        log.info("NUpdate:{}", isNUpdate);
+        // 尝试读取是否为第一个实例
+        if ((!windowsAppMutex.isFirstInstance()) && (!isNUpdate)) {
+            windowsAppMutex.sendSoftwareVisibleDirectiveToExistingInstance(true);
+            // 发送参数到已有实例
+            if (pictureFileThread != null) {
+                try {
+                    pictureFileThread.join();
+                    if (openingFilePath.get() != null && !openingFilePath.get().isBlank()) {
+                        windowsAppMutex.sendFilePathToExistingInstance(openingFilePath.get());
+                    }
+                } catch (Exception e) {
+                    log.error(ExceptionHandler.getExceptionMessage(e));
+                }
+            }
+            exitAndRecord();
+        }
+
+        initSystemTrayMenuItems();
+        String classPath = System.getProperty("java.class.path");
+        if (classPath == null || classPath.isBlank()) {
+            System.setProperty("java.home", ".");
+        }
+        init.run();
+        UIManager.getUIManager().setTheme(SettingsInfoHandle.getInt("ThemeMode", init.getProperties()));
+        UIManager.getUIManager().applyThemeOnSetAndRefreshWindows();
+        main = new GUIStarter("Picture Player(Version:" + PicturePlayerVersion.getVersion() + ")");
+        windowsAppMutex.addGetFilePathFromCreatingInstanceAction(e -> {
+            main.openPicture(e);
+        });
+        windowsAppMutex.addReceiveSoftwareVisibleDirective(e -> {
+            main.setVisible(e);
+        });
+        if (openingFilePath.get() != null && !openingFilePath.get().isBlank()) {
+            main.openPicture(openingFilePath.get());
+        }
+        initSystemTray();
+        extractedSystemInfoToLog();
+    }
+
+    //更新界面
+    public static void UpdateForm(CheckAndDownloadUpdate downloadUpdate) {
+        StringFormation stringFormation_title = new StringFormation(Bundle.getMessage("FindUpdateTitle"));
+        stringFormation_title.add("version", PicturePlayerVersion.getVersion());
+        stringFormation_title.add("version", downloadUpdate.NewVersionName);
+        stringFormation_title.add("versionID", String.valueOf(downloadUpdate.NewVersionID));
+        SystemNotifications.sendMessage(SystemNotifications.DefaultIcon,
+                stringFormation_title.getProcessingString(),
+                Bundle.getMessage("SystemTrayMenu_FindNewVersionContent"),
+                TrayIcon.MessageType.INFO);
+        ConfirmUpdateDialog confirmUpdateDialog = new ConfirmUpdateDialog(downloadUpdate);
+        confirmUpdateDialog.pack();
+        confirmUpdateDialog.setVisible(true);
+    }
 
     public GUIStarter(String title) {
         super(title);
@@ -231,23 +315,6 @@ public class GUIStarter extends JFrame {
         PaintPicturePanel.isEnableHardwareAcceleration = Boolean.parseBoolean(init.getProperties().getProperty("EnableHardwareAcceleration")) && GetImageInformation.isHardwareAccelerated;
     }
 
-    private JComboBox<String> CloseMainFrameControlComboBox;
-
-    static {
-        //初始化Init
-        init = new Init<>();
-        init.setUpdate(true);
-        ExceptionHandler.setUncaughtExceptionHandler(log);
-        log.info("The software starts running...");
-        System.setProperty("sun.java2d.opengl", "true");
-        System.setProperty("file.encoding", "UTF-8");
-        System.setProperty("SoftwareName", "PicturePlayer");
-        log.info("SoftwareName:{}", System.getProperty("SoftwareName"));
-        initSystemTrayMenuItems();
-    }
-
-    private static Method $$$cachedGetBundleMethod$$$ = null;
-
     private static void initSystemTrayMenuItems() {
         MenuItem open = new MenuItem(Bundle.getMessage("SystemTrayMenu_Open"));
         MenuItem display = new MenuItem(Bundle.getMessage("SystemTrayMenu_Display"));
@@ -306,52 +373,6 @@ public class GUIStarter extends JFrame {
         SystemTrayMenuItems = new MenuItem[]{
                 open, display, settings, about, checkUpdate, exit
         };
-    }    private final DropTargetAdapter dropTargetAdapter = new DropTargetAdapter() {
-        public void drop(DropTargetDropEvent dtde) {
-            try {
-                dtde.acceptDrop(DnDConstants.ACTION_COPY);
-                Transferable transferable = dtde.getTransferable();
-                if (transferable.isDataFlavorSupported(DataFlavor.javaFileListFlavor)) {
-                    Object obj = transferable.getTransferData(DataFlavor.javaFileListFlavor);
-                    List<File> files = null;
-                    if (!(obj instanceof List<?>)) {
-                        throw new ClassCastException("Can't convert object:" + obj + "to object List<File>");
-                    }
-                    files = (List<File>) obj;
-                    File file = checkFileOpen(files);
-                    if (file != null) {
-                        openPicture(file.getPath());
-                    }
-                }
-            } catch (IOException | UnsupportedFlavorException e) {
-                log.error(ExceptionHandler.getExceptionMessage(e));
-            }
-        }
-    };
-
-    private File checkFileOpen(CheckFileIsRightPictureType checkFileIsRightPictureType, boolean isMakeSure) {
-        checkFileIsRightPictureType.statistics();
-        if (checkFileIsRightPictureType.getNotImageCount() != 0) {
-            JOptionPane.showMessageDialog(GUIStarter.main, Bundle.getMessage("OpenPictureError_Content") + "\n\"" + checkFileIsRightPictureType.filePathToString("\n", checkFileIsRightPictureType.getNotImageList()) + "\"", Bundle.getMessage("OpenPictureError_Title"), JOptionPane.ERROR_MESSAGE);
-        }
-        if (checkFileIsRightPictureType.getImageCount() == 0) return null;
-        File choose;
-        if (checkFileIsRightPictureType.getImageCount() == 1) {
-            choose = checkFileIsRightPictureType.getImageList().getFirst();
-            String choose_hashcode = GetImageInformation.getHashcode(choose);
-            if (GUIStarter.main.paintPicture != null && GUIStarter.main.paintPicture.imageCanvas.getPath() != null) {
-                if (choose_hashcode == null && paintPicture.imageCanvas.getPicture_hashcode() == null) {
-                    log.warn("Couldn't get current or opening picture hashcode,this will fake the judgment file path");
-                    if (!new File(GUIStarter.main.paintPicture.imageCanvas.getPath()).equals(choose)) return null;
-                } else if (Objects.equals(choose_hashcode, paintPicture.imageCanvas.getPicture_hashcode()))
-                    return REPEAT_PICTURE_PATH_LOGOTYPE;
-                if (isMakeSure && JOptionPane.showConfirmDialog(GUIStarter.main, Bundle.getMessage("OpenPictureExactly_Content") + "\n\"" + choose.getPath() + "\"", Bundle.getMessage("OpenPictureExactly_Title"), JOptionPane.YES_NO_OPTION) != JOptionPane.YES_OPTION)
-                    return REPEAT_PICTURE_PATH_LOGOTYPE;
-            }
-        } else {
-            choose = OpenImageChooser.openImageWithChoice(GUIStarter.main, checkFileIsRightPictureType.getImageList());
-        }
-        return choose;
     }
 
     private static void closeInformation() {
@@ -376,59 +397,20 @@ public class GUIStarter extends JFrame {
         }
     }
 
-    public static void main(String[] args) throws InterruptedException {
-        String classPath = System.getProperty("java.class.path");
-        if (classPath == null || classPath.isBlank()) {
-            System.setProperty("java.home", ".");
-        }
-        AtomicReference<String> openingFilePath = new AtomicReference<>();
-        Thread pictureFileThread = null;
-        if (args.length > 0) {
-            pictureFileThread = new Thread(() -> {
-                for (String arg : args) {
-                    if (GetImageInformation.isImageFile(new File(arg))) {
-                        openingFilePath.set(arg);
-                        return;
-                    }
-                }
-            });
-            pictureFileThread.start();
-        }
-        windowsAppMutex = new WindowsAppMutex(22357);
-        // 尝试创建互斥体
-        final boolean isFirstInstance = windowsAppMutex.isFirstInstance();
-
-        if (!isFirstInstance) {
-            windowsAppMutex.sendSoftwareVisibleDirectiveToExistingInstance(true);
-            // 发送参数到已有实例
-            if (pictureFileThread != null) {
-                pictureFileThread.join();
-                try {
-                    if (openingFilePath.get() != null && !openingFilePath.get().isBlank()) {
-                        windowsAppMutex.sendFilePathToExistingInstance(openingFilePath.get());
-                    }
-                } catch (Exception e) {
-                    log.error(ExceptionHandler.getExceptionMessage(e));
-                }
+    public static void initSystemTray() {
+        if (systemTray != null) return;
+        systemTray = SystemNotifications.getSystemTray(SystemNotifications.DefaultIcon, SystemTrayMenuItems, e -> {
+            if (e.getClickCount() == 2) {
+                GUIStarter.main.setVisible(true);
             }
-            exitAndRecord();
-        }
+        });
+    }
 
-        init.run();
-        UIManager.getUIManager().setTheme(SettingsInfoHandle.getInt("ThemeMode", init.getProperties()));
-        UIManager.getUIManager().applyThemeOnSetAndRefreshWindows();
-        main = new GUIStarter("Picture Player(Version:" + PicturePlayerVersion.getVersion() + ")");
-        windowsAppMutex.addGetFilePathFromCreatingInstanceAction(e -> {
-            main.openPicture(e);
-        });
-        windowsAppMutex.addReceiveSoftwareVisibleDirective(e -> {
-            main.setVisible(e);
-        });
-        if (openingFilePath.get() != null && !openingFilePath.get().isBlank()) {
-            main.openPicture(openingFilePath.get());
-        }
-        goToSystemTray();
-        extractedSystemInfoToLog();
+    public static void gotoSystemTrayAndDisposeMainFrame() {
+        GUIStarter.main.dispose();
+        if (GUIStarter.main != null && GUIStarter.main.paintPicture != null && GUIStarter.main.paintPicture.imageCanvas != null)
+            GUIStarter.main.paintPicture.imageCanvas.setLowOccupancyMode(true);
+        System.gc();
     }
 
     //关闭
@@ -452,8 +434,7 @@ public class GUIStarter extends JFrame {
             //最小化到系统托盘
             case 2 -> {
                 log.info("Minimized to the system tray");
-                GUIStarter.main.dispose();
-                System.gc();
+                gotoSystemTrayAndDisposeMainFrame();
                 return;
             }
         }
@@ -478,8 +459,7 @@ public class GUIStarter extends JFrame {
                         GUIStarter.main.CloseMainFrameControlComboBox.setSelectedIndex(2);
                     }
                     log.info("Minimized to the system tray");
-                    GUIStarter.main.dispose();
-                    System.gc();
+                    gotoSystemTrayAndDisposeMainFrame();
                 }
             }
 
@@ -492,15 +472,6 @@ public class GUIStarter extends JFrame {
         windowsAppMutex.close();
         log.info("Program Termination!");
         System.exit(0);
-    }
-
-    private static void goToSystemTray() {
-        if (systemTray != null) return;
-        systemTray = SystemNotifications.getSystemTray(SystemNotifications.DefaultIcon, SystemTrayMenuItems, e -> {
-            if (e.getClickCount() == 2) {
-                GUIStarter.main.setVisible(true);
-            }
-        });
     }
 
     //初始化所有组件设置
@@ -613,6 +584,121 @@ public class GUIStarter extends JFrame {
         });
     }
 
+    //设置界面
+    private void settings() {
+        for (String i : ThemeComboBoxStringItems) {
+            ThemeModeComboBox.addItem(Bundle.getMessage(i));
+        }
+        for (String i : CloseMainFrameControlComboBoxStringItems) {
+            CloseMainFrameControlComboBox.addItem(Bundle.getMessage(i));
+        }
+        reFresh();
+        ThemeModeComboBox.addItemListener(e -> {
+            centre.CurrentData.replace("ThemeMode", String.valueOf(ThemeModeComboBox.getSelectedIndex()));
+            UIManager.getUIManager().setTheme(ThemeModeComboBox
+                    .getSelectedIndex());
+            UIManager.getUIManager().applyThemeOnSetAndRefreshWindows();
+            FontPreservingUIUpdater.updateComponentTreeUIWithFontPreservation(paintPicture);
+            settingRevised(true);
+        });
+        CloseMainFrameControlComboBox.addItemListener(e -> {
+            centre.CurrentData.replace("CloseMainFrameControl", String.valueOf(CloseMainFrameControlComboBox.getSelectedIndex()));
+            settingRevised(true);
+        });
+        EnableHistoryLoaderCheckBox.addActionListener(e -> {
+            centre.CurrentData.replace("EnableHistoryLoader", String.valueOf(EnableHistoryLoaderCheckBox.isSelected()));
+            settingRevised(true);
+        });
+        EnableCursorDisplayCheckBox.addActionListener(e -> {
+            centre.CurrentData.replace("EnableCursorDisplay", String.valueOf(EnableCursorDisplayCheckBox.isSelected()));
+            settingRevised(true);
+        });
+        MouseMoveOffsetsSlider.addChangeListener(e -> {
+            centre.CurrentData.replace("MouseMoveOffsets", String.valueOf(MouseMoveOffsetsSlider.getValue()));
+            StringBuilder stringBuffer1 = new StringBuilder(MouseMoveLabelPrefix);
+            stringBuffer1.insert(MouseMoveLabelPrefix.indexOf(":") + 1, MouseMoveOffsetsSlider.getValue() + "% ");
+            MouseMoveOffsetsLabel.setText(stringBuffer1.toString());
+            settingRevised(true);
+        });
+        EnableProxyServerCheckBox.addActionListener(e -> {
+            centre.CurrentData.replace("EnableProxyServer", String.valueOf(EnableProxyServerCheckBox.isSelected()));
+            ProxyServerButton.setVisible(EnableProxyServerCheckBox.isSelected());
+            ProxyServerLabel.setVisible(EnableProxyServerCheckBox.isSelected());
+            settingRevised(true);
+        });
+        EnableHardwareAccelerationCheckBox.addActionListener(e -> {
+            centre.CurrentData.replace("EnableHardwareAcceleration", String.valueOf(EnableHardwareAccelerationCheckBox.isSelected()));
+            ProxyServerButton.setEnabled(EnableHardwareAccelerationCheckBox.isSelected());
+            settingRevised(true);
+        });
+        EnableSecureConnectionCheckBox.addActionListener(e -> {
+            if (!EnableSecureConnectionCheckBox.isSelected()) {
+                EnableSecureConnectionCheckBox.setSelected(true);
+                int choose = JOptionPane.showConfirmDialog(GUIStarter.main, Bundle.getMessage("ConfirmCloseSecureConnection_Content_1Line") + "\n" + Bundle.getMessage("ConfirmCloseSecureConnection_Content_2Line"), Bundle.getMessage("ConfirmCloseSecureConnection_Title"), JOptionPane.YES_NO_OPTION);
+                if (choose != 0) {
+                    return;
+                }
+                EnableSecureConnectionCheckBox.setSelected(false);
+            }
+            centre.CurrentData.replace("EnableSecureConnection", String.valueOf(EnableSecureConnectionCheckBox.isSelected()));
+            settingRevised(true);
+        });
+        AutoCheckUpdateCheckBox.addActionListener(e -> {
+            centre.CurrentData.replace("AutoCheckUpdate", String.valueOf(AutoCheckUpdateCheckBox.isSelected()));
+            settingRevised(true);
+        });
+    }
+
+    //关于界面设置
+    private void about() {
+        CheckAndDownloadUpdate downloadUpdate = new CheckAndDownloadUpdate(UPDATE_WEBSITE);
+        CheckVersionButton.addActionListener(e -> {
+            downloadUpdate.setWebSide(UPDATE_WEBSITE);
+            try {
+                if (!downloadUpdate.checkIfTheLatestVersion()) {
+                    int choice = JOptionPane.showConfirmDialog(GUIStarter.main, Bundle.getMessage("NoAnyUpdate_Content_First") + "\n" + Bundle.getMessage("NoAnyUpdate_Content_Second"), Bundle.getMessage("NoAnyUpdate_Title"), JOptionPane.YES_NO_OPTION);
+                    if (choice != JOptionPane.YES_OPTION) {
+                        return;
+                    }
+                }
+            } catch (IOException e1) {
+                log.error(ExceptionHandler.getExceptionMessage(e1));
+                JOptionPane.showMessageDialog(GUIStarter.main, "Error: " + e1 + "\n" + Bundle.getMessage("CantGetUpdate_Content"), Bundle.getMessage("CantGetUpdate_Title"), JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+            new Thread(() -> {
+                ExceptionHandler.setUncaughtExceptionHandler(log);
+                ConfirmUpdateDialog confirmUpdateDialog = new ConfirmUpdateDialog(downloadUpdate);
+                confirmUpdateDialog.pack();
+                confirmUpdateDialog.setVisible(true);
+            }).start();
+        });
+
+        FreeUpMemory.addActionListener(e -> {
+            System.gc();
+            JOptionPane.showConfirmDialog(GUIStarter.main, Bundle.getMessage("FreeUpMemory_Content"), Bundle.getMessage("FreeUpMemory_Title"), JOptionPane.DEFAULT_OPTION);
+        });
+
+    }
+
+    private void reFresh() {
+        EnableHardwareAccelerationCheckBox.setSelected(SettingsInfoHandle.getBoolean("EnableHardwareAcceleration", centre.CurrentData));
+        ThemeModeComboBox.setSelectedIndex(SettingsInfoHandle.getInt("ThemeMode", centre.CurrentData));
+        CloseMainFrameControlComboBox.setSelectedIndex(SettingsInfoHandle.getInt("CloseMainFrameControl", centre.CurrentData));
+        EnableHistoryLoaderCheckBox.setSelected(SettingsInfoHandle.getBoolean("EnableHistoryLoader", centre.CurrentData));
+        EnableCursorDisplayCheckBox.setSelected(SettingsInfoHandle.getBoolean("EnableCursorDisplay", centre.CurrentData));
+        MouseMoveOffsetsSlider.setValue((int) SettingsInfoHandle.getDouble("MouseMoveOffsets", centre.CurrentData));
+        StringBuilder stringBuffer = new StringBuilder(MouseMoveLabelPrefix);
+        stringBuffer.insert(MouseMoveLabelPrefix.indexOf(":") + 1, MouseMoveOffsetsSlider.getValue() + "% ");
+        MouseMoveOffsetsLabel.setText(stringBuffer.toString());
+        EnableProxyServerCheckBox.setSelected(SettingsInfoHandle.getBoolean("EnableProxyServer", centre.CurrentData));
+        ProxyServerLabel.setText(ProxyServerPrefix + centre.CurrentData.get("ProxyServer"));
+        EnableSecureConnectionCheckBox.setSelected(SettingsInfoHandle.getBoolean("EnableSecureConnection", centre.CurrentData));
+        AutoCheckUpdateCheckBox.setSelected(SettingsInfoHandle.getBoolean("AutoCheckUpdate", centre.CurrentData));
+        ProxyServerButton.setVisible(EnableProxyServerCheckBox.isSelected());
+        ProxyServerLabel.setVisible(EnableProxyServerCheckBox.isSelected());
+    }
+
     //代理服务器设置
     private static void setProxyServerOfInit() {
         String website = init.getProperties().getProperty("ProxyServer");
@@ -631,19 +717,121 @@ public class GUIStarter extends JFrame {
         EnableProxyServer = true;
     }
 
-    //更新界面
-    public static void UpdateForm(CheckAndDownloadUpdate downloadUpdate) {
-        StringFormation stringFormation_title = new StringFormation(Bundle.getMessage("FindUpdateTitle"));
-        stringFormation_title.add("version", PicturePlayerVersion.getVersion());
-        stringFormation_title.add("version", downloadUpdate.NewVersionName);
-        stringFormation_title.add("versionID", String.valueOf(downloadUpdate.NewVersionID));
-        SystemNotifications.sendMessage(SystemNotifications.DefaultIcon,
-                stringFormation_title.getProcessingString(),
-                Bundle.getMessage("SystemTrayMenu_FindNewVersionContent"),
-                TrayIcon.MessageType.INFO);
-        ConfirmUpdateDialog confirmUpdateDialog = new ConfirmUpdateDialog(downloadUpdate);
-        confirmUpdateDialog.pack();
-        confirmUpdateDialog.setVisible(true);
+    //设置修改
+    private void settingRevised(boolean a) {
+        if (a && !getTitle().contains("*")) {
+            setTitle(getTitle() + "*");
+        } else if ((!a) && getTitle().contains("*")) {
+            setTitle(getTitle().substring(0, getTitle().lastIndexOf("*")));
+        }
+    }
+
+    //打开图片
+    public void openPicture(String path) {
+        if (path == null || path.endsWith("???")) return;
+        textField1.setText(path);
+        new Thread(() -> {
+            try {
+                init_PaintPicture.join();
+            } catch (InterruptedException ignored) {
+
+            }
+            if (paintPicture.imageCanvas == null || paintPicture.imageCanvas.getPath() == null) {
+                tabbedPane1.setComponentAt(1, paintPicture);
+                new DropTarget(paintPicture, DnDConstants.ACTION_COPY_OR_MOVE, dropTargetAdapter, true);
+            }
+            try {
+                SwingUtilities.invokeAndWait(() -> {
+                    paintPicture.setSize(tabbedPane1.getSize());
+                    paintPicture.changePicturePath(path);
+                    tabbedPane1.setSelectedIndex(1);
+                });
+            } catch (InterruptedException | InvocationTargetException e) {
+                log.error(ExceptionHandler.getExceptionMessage(e));
+            }
+        }).start();
+    }
+
+    private File checkFileOpen(CheckFileIsRightPictureType checkFileIsRightPictureType, boolean isMakeSure) {
+        checkFileIsRightPictureType.statistics();
+        if (checkFileIsRightPictureType.getNotImageCount() != 0) {
+            JOptionPane.showMessageDialog(GUIStarter.main, Bundle.getMessage("OpenPictureError_Content") + "\n\"" + checkFileIsRightPictureType.filePathToString("\n", checkFileIsRightPictureType.getNotImageList()) + "\"", Bundle.getMessage("OpenPictureError_Title"), JOptionPane.ERROR_MESSAGE);
+        }
+        if (checkFileIsRightPictureType.getImageCount() == 0) return null;
+        File choose;
+        if (checkFileIsRightPictureType.getImageCount() == 1) {
+            choose = checkFileIsRightPictureType.getImageList().getFirst();
+            String choose_hashcode = GetImageInformation.getHashcode(choose);
+            if (GUIStarter.main.paintPicture != null && GUIStarter.main.paintPicture.imageCanvas.getPath() != null) {
+                if (choose_hashcode == null && paintPicture.imageCanvas.getPicture_hashcode() == null) {
+                    log.warn("Couldn't get current or opening picture hashcode,this will fake the judgment file path");
+                    if (!new File(GUIStarter.main.paintPicture.imageCanvas.getPath()).equals(choose)) return null;
+                } else if (Objects.equals(choose_hashcode, paintPicture.imageCanvas.getPicture_hashcode()))
+                    return REPEAT_PICTURE_PATH_LOGOTYPE;
+                if (isMakeSure && JOptionPane.showConfirmDialog(GUIStarter.main, Bundle.getMessage("OpenPictureExactly_Content") + "\n\"" + choose.getPath() + "\"", Bundle.getMessage("OpenPictureExactly_Title"), JOptionPane.YES_NO_OPTION) != JOptionPane.YES_OPTION)
+                    return REPEAT_PICTURE_PATH_LOGOTYPE;
+            }
+        } else {
+            choose = OpenImageChooser.openImageWithChoice(GUIStarter.main, checkFileIsRightPictureType.getImageList());
+        }
+        return choose;
+    }
+
+    //代理服务器更改
+    public void setProxyServerOfInit(String ProxyServerAddress) {
+        if (ProxyServerAddress == null || ProxyServerAddress.trim().isEmpty()) return;
+        ProxyServerAddress = ProxyServerAddress.trim();
+        if (ProxyServerAddress.equals(centre.CurrentData.get("ProxyServer"))) return;
+        if (!ProxyServerAddress.equals("proxy server address") && !ProxyServerAddress.isEmpty()) {
+            init.changeValue("ProxyServer", ProxyServerAddress);
+            setProxyServerOfInit();
+            log.info("To enable a new proxy server:{}", ProxyServerAddress);
+            EnableProxyServerCheckBox.setSelected(true);
+            ProxyServerButton.setVisible(true);
+            ProxyServerLabel.setVisible(true);
+            centre.CurrentData.replace("ProxyServer", ProxyServerAddress);
+            ProxyServerLabel.setText(Bundle.getMessage("ProxyServerLabel") + centre.CurrentData.get("ProxyServer"));
+            JOptionPane.showConfirmDialog(GUIStarter.main, Bundle.getMessage("ProxyServerWasModified_Content"), Bundle.getMessage("ProxyServerWasModified_Title"), JOptionPane.YES_NO_OPTION);
+            settingRevised(true);
+        }
+    }
+
+    public void reviewPictureList(ArrayList<String> picturePath) {
+        if (picturePath == null) return;
+        HashSet<String> addition = new HashSet<>(picturePath);
+
+        LinkedList<String> cache = new LinkedList<>(thumbnailPreviewOfImages.keySet());
+        //移走所有当前列表中的图片路径不在当前显示列表
+        for (String currentBufferedPicturePath : cache) {
+            if (!addition.contains(currentBufferedPicturePath)) {
+                ThumbnailPreviewOfImage thumbnailPreviewOfImage = thumbnailPreviewOfImages.get(currentBufferedPicturePath);
+                //如果当前显示列表没有的图片路径在缩略图预览中存在，则移除
+                FileChoosePane.remove(thumbnailPreviewOfImage);
+                thumbnailPreviewOfImage.dispose();
+                thumbnailPreviewOfImages.remove(currentBufferedPicturePath);
+                addition.remove(currentBufferedPicturePath);
+            }
+        }
+
+        //创建当前显示列表没有的图片
+        for (String path : addition) {
+            ThumbnailPreviewOfImage thumbnailPreviewOfImage = null;
+            try {
+                thumbnailPreviewOfImage = new ThumbnailPreviewOfImage(path);
+            } catch (IOException e) {
+                log.error(ExceptionHandler.getExceptionMessage(e));
+                picturePath.remove(path);
+                continue;
+            }
+            FileChoosePane.add(thumbnailPreviewOfImage);
+            thumbnailPreviewOfImages.put(path, thumbnailPreviewOfImage);
+        }
+
+        addition.clear();
+        cache.clear();
+
+        FileChoosePane.revalidate();
+        FileChoosePane.repaint();
     }
 
     //获取焦点
@@ -664,6 +852,15 @@ public class GUIStarter extends JFrame {
             //让窗体获取焦点
             requestFocusInWindow();
         }
+    }
+
+    //检查文件打开
+    private File checkFileOpen(File... files) {
+        return checkFileOpen(new CheckFileIsRightPictureType(files), false);
+    }
+
+    private File checkFileOpen(List<File> files) {
+        return checkFileOpen(new CheckFileIsRightPictureType(files), true);
     }
 
     /**
@@ -946,70 +1143,7 @@ public class GUIStarter extends JFrame {
         return fontWithFallback instanceof FontUIResource ? fontWithFallback : new FontUIResource(fontWithFallback);
     }
 
-    //设置界面
-    private void settings() {
-        for (String i : ThemeComboBoxStringItems) {
-            ThemeModeComboBox.addItem(Bundle.getMessage(i));
-        }
-        for (String i : CloseMainFrameControlComboBoxStringItems) {
-            CloseMainFrameControlComboBox.addItem(Bundle.getMessage(i));
-        }
-        reFresh();
-        ThemeModeComboBox.addItemListener(e -> {
-            centre.CurrentData.replace("ThemeMode", String.valueOf(ThemeModeComboBox.getSelectedIndex()));
-            UIManager.getUIManager().setTheme(ThemeModeComboBox
-                    .getSelectedIndex());
-            UIManager.getUIManager().applyThemeOnSetAndRefreshWindows();
-            FontPreservingUIUpdater.updateComponentTreeUIWithFontPreservation(paintPicture);
-            settingRevised(true);
-        });
-        CloseMainFrameControlComboBox.addItemListener(e -> {
-            centre.CurrentData.replace("CloseMainFrameControl", String.valueOf(CloseMainFrameControlComboBox.getSelectedIndex()));
-            settingRevised(true);
-        });
-        EnableHistoryLoaderCheckBox.addActionListener(e -> {
-            centre.CurrentData.replace("EnableHistoryLoader", String.valueOf(EnableHistoryLoaderCheckBox.isSelected()));
-            settingRevised(true);
-        });
-        EnableCursorDisplayCheckBox.addActionListener(e -> {
-            centre.CurrentData.replace("EnableCursorDisplay", String.valueOf(EnableCursorDisplayCheckBox.isSelected()));
-            settingRevised(true);
-        });
-        MouseMoveOffsetsSlider.addChangeListener(e -> {
-            centre.CurrentData.replace("MouseMoveOffsets", String.valueOf(MouseMoveOffsetsSlider.getValue()));
-            StringBuilder stringBuffer1 = new StringBuilder(MouseMoveLabelPrefix);
-            stringBuffer1.insert(MouseMoveLabelPrefix.indexOf(":") + 1, MouseMoveOffsetsSlider.getValue() + "% ");
-            MouseMoveOffsetsLabel.setText(stringBuffer1.toString());
-            settingRevised(true);
-        });
-        EnableProxyServerCheckBox.addActionListener(e -> {
-            centre.CurrentData.replace("EnableProxyServer", String.valueOf(EnableProxyServerCheckBox.isSelected()));
-            ProxyServerButton.setVisible(EnableProxyServerCheckBox.isSelected());
-            ProxyServerLabel.setVisible(EnableProxyServerCheckBox.isSelected());
-            settingRevised(true);
-        });
-        EnableHardwareAccelerationCheckBox.addActionListener(e -> {
-            centre.CurrentData.replace("EnableHardwareAcceleration", String.valueOf(EnableHardwareAccelerationCheckBox.isSelected()));
-            ProxyServerButton.setEnabled(EnableHardwareAccelerationCheckBox.isSelected());
-            settingRevised(true);
-        });
-        EnableSecureConnectionCheckBox.addActionListener(e -> {
-            if (!EnableSecureConnectionCheckBox.isSelected()) {
-                EnableSecureConnectionCheckBox.setSelected(true);
-                int choose = JOptionPane.showConfirmDialog(GUIStarter.main, Bundle.getMessage("ConfirmCloseSecureConnection_Content_1Line") + "\n" + Bundle.getMessage("ConfirmCloseSecureConnection_Content_2Line"), Bundle.getMessage("ConfirmCloseSecureConnection_Title"), JOptionPane.YES_NO_OPTION);
-                if (choose != 0) {
-                    return;
-                }
-                EnableSecureConnectionCheckBox.setSelected(false);
-            }
-            centre.CurrentData.replace("EnableSecureConnection", String.valueOf(EnableSecureConnectionCheckBox.isSelected()));
-            settingRevised(true);
-        });
-        AutoCheckUpdateCheckBox.addActionListener(e -> {
-            centre.CurrentData.replace("AutoCheckUpdate", String.valueOf(AutoCheckUpdateCheckBox.isSelected()));
-            settingRevised(true);
-        });
-    }
+
 
     private String $$$getMessageFromBundle$$$(String path, String key) {
         ResourceBundle bundle;
@@ -1088,135 +1222,7 @@ public class GUIStarter extends JFrame {
     }
 
 
-
-
-    private void reFresh() {
-        EnableHardwareAccelerationCheckBox.setSelected(SettingsInfoHandle.getBoolean("EnableHardwareAcceleration", centre.CurrentData));
-        ThemeModeComboBox.setSelectedIndex(SettingsInfoHandle.getInt("ThemeMode", centre.CurrentData));
-        CloseMainFrameControlComboBox.setSelectedIndex(SettingsInfoHandle.getInt("CloseMainFrameControl", centre.CurrentData));
-        EnableHistoryLoaderCheckBox.setSelected(SettingsInfoHandle.getBoolean("EnableHistoryLoader", centre.CurrentData));
-        EnableCursorDisplayCheckBox.setSelected(SettingsInfoHandle.getBoolean("EnableCursorDisplay", centre.CurrentData));
-        MouseMoveOffsetsSlider.setValue((int) SettingsInfoHandle.getDouble("MouseMoveOffsets", centre.CurrentData));
-        StringBuilder stringBuffer = new StringBuilder(MouseMoveLabelPrefix);
-        stringBuffer.insert(MouseMoveLabelPrefix.indexOf(":") + 1, MouseMoveOffsetsSlider.getValue() + "% ");
-        MouseMoveOffsetsLabel.setText(stringBuffer.toString());
-        EnableProxyServerCheckBox.setSelected(SettingsInfoHandle.getBoolean("EnableProxyServer", centre.CurrentData));
-        ProxyServerLabel.setText(ProxyServerPrefix + centre.CurrentData.get("ProxyServer"));
-        EnableSecureConnectionCheckBox.setSelected(SettingsInfoHandle.getBoolean("EnableSecureConnection", centre.CurrentData));
-        AutoCheckUpdateCheckBox.setSelected(SettingsInfoHandle.getBoolean("AutoCheckUpdate", centre.CurrentData));
-        ProxyServerButton.setVisible(EnableProxyServerCheckBox.isSelected());
-        ProxyServerLabel.setVisible(EnableProxyServerCheckBox.isSelected());
-    }
-
-
-    //关于界面设置
-    private void about() {
-        CheckAndDownloadUpdate downloadUpdate = new CheckAndDownloadUpdate(UPDATE_WEBSITE);
-        CheckVersionButton.addActionListener(e -> {
-            downloadUpdate.setWebSide(UPDATE_WEBSITE);
-            try {
-                if (!downloadUpdate.checkIfTheLatestVersion()) {
-                    int choice = JOptionPane.showConfirmDialog(GUIStarter.main, Bundle.getMessage("NoAnyUpdate_Content_First") + "\n" + Bundle.getMessage("NoAnyUpdate_Content_Second"), Bundle.getMessage("NoAnyUpdate_Title"), JOptionPane.YES_NO_OPTION);
-                    if (choice != JOptionPane.YES_OPTION) {
-                        return;
-                    }
-                    downloadUpdate.ForceToGetUpdates();
-                }
-            } catch (IOException e1) {
-                log.error(ExceptionHandler.getExceptionMessage(e1));
-                JOptionPane.showMessageDialog(GUIStarter.main, "Error: " + e1 + "\n" + Bundle.getMessage("CantGetUpdate_Content"), Bundle.getMessage("CantGetUpdate_Title"), JOptionPane.ERROR_MESSAGE);
-                return;
-            }
-            new Thread(() -> {
-                ExceptionHandler.setUncaughtExceptionHandler(log);
-                ConfirmUpdateDialog confirmUpdateDialog = new ConfirmUpdateDialog(downloadUpdate);
-                confirmUpdateDialog.pack();
-                confirmUpdateDialog.setVisible(true);
-            }).start();
-        });
-
-        FreeUpMemory.addActionListener(e -> {
-            System.gc();
-            JOptionPane.showConfirmDialog(GUIStarter.main, Bundle.getMessage("FreeUpMemory_Content"), Bundle.getMessage("FreeUpMemory_Title"), JOptionPane.DEFAULT_OPTION);
-        });
-
-    }
-
-
-    //设置修改
-    private void settingRevised(boolean a) {
-        if (a && !getTitle().contains("*")) {
-            setTitle(getTitle() + "*");
-        } else if ((!a) && getTitle().contains("*")) {
-            setTitle(getTitle().substring(0, getTitle().lastIndexOf("*")));
-        }
-    }
-
-    //代理服务器更改
-    public void setProxyServerOfInit(String ProxyServerAddress) {
-        if (ProxyServerAddress == null || ProxyServerAddress.trim().isEmpty()) return;
-        ProxyServerAddress = ProxyServerAddress.trim();
-        if (ProxyServerAddress.equals(centre.CurrentData.get("ProxyServer"))) return;
-        if (!ProxyServerAddress.equals("proxy server address") && !ProxyServerAddress.isEmpty()) {
-            init.changeValue("ProxyServer", ProxyServerAddress);
-            setProxyServerOfInit();
-            log.info("To enable a new proxy server:{}", ProxyServerAddress);
-            EnableProxyServerCheckBox.setSelected(true);
-            ProxyServerButton.setVisible(true);
-            ProxyServerLabel.setVisible(true);
-            centre.CurrentData.replace("ProxyServer", ProxyServerAddress);
-            ProxyServerLabel.setText(Bundle.getMessage("ProxyServerLabel") + centre.CurrentData.get("ProxyServer"));
-            JOptionPane.showConfirmDialog(GUIStarter.main, Bundle.getMessage("ProxyServerWasModified_Content"), Bundle.getMessage("ProxyServerWasModified_Title"), JOptionPane.YES_NO_OPTION);
-            settingRevised(true);
-        }
-    }
-
-    //检查文件打开
-    private File checkFileOpen(File... files) {
-        return checkFileOpen(new CheckFileIsRightPictureType(files), false);
-    }
-
-    public void reviewPictureList(ArrayList<String> picturePath) {
-        ArrayList<String> cached = (ArrayList<String>) picturePath.clone();
-        //移走所有已在列表中的图片路径
-        cached.removeAll(thumbnailPreviewOfImages.keySet());
-
-        ArrayList<String> removed = new ArrayList<>();
-
-        //移走所有当前列表中的图片路径不在当前显示列表
-        for (String currentBufferedPicturePath : thumbnailPreviewOfImages.keySet()) {
-            if (!picturePath.contains(currentBufferedPicturePath)) {
-                FileChoosePane.remove(thumbnailPreviewOfImages.get(currentBufferedPicturePath));
-                removed.add(currentBufferedPicturePath);
-            }
-        }
-        removed.forEach(thumbnailPreviewOfImages::remove);
-
-        //创建当前显示列表没有的图片
-        for (String path : cached) {
-            ThumbnailPreviewOfImage thumbnailPreviewOfImage = null;
-            try {
-                thumbnailPreviewOfImage = new ThumbnailPreviewOfImage(path);
-            } catch (IOException e) {
-                log.error(ExceptionHandler.getExceptionMessage(e));
-                picturePath.remove(path);
-                continue;
-            }
-            FileChoosePane.add(thumbnailPreviewOfImage);
-            thumbnailPreviewOfImages.put(path, thumbnailPreviewOfImage);
-        }
-        FileChoosePane.revalidate();
-        FileChoosePane.repaint();
-    }
-
-
     private void createUIComponents() {
         // TODO: place custom component creation code here
     }
-
-    private File checkFileOpen(List<File> files) {
-        return checkFileOpen(new CheckFileIsRightPictureType(files), true);
-    }
-
-
 }

@@ -2,6 +2,7 @@ package top.nserly.PicturePlayer.Utils.ImageManager.Info;
 
 import lombok.extern.slf4j.Slf4j;
 import top.nserly.PicturePlayer.Size.GetSystemSize;
+import top.nserly.SoftwareCollections_API.Handler.Exception.ExceptionHandler;
 
 import javax.imageio.ImageIO;
 import javax.imageio.ImageReader;
@@ -9,13 +10,8 @@ import javax.imageio.stream.ImageInputStream;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.awt.image.VolatileImage;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
+import java.io.*;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -27,7 +23,7 @@ public class GetImageInformation {
     public static final boolean isHardwareAccelerated;
     public static final String[] readFormats = ImageIO.getReaderFormatNames();
 
-    private static final String[] SupportPictureExtension = new String[readFormats.length];
+    private static final ArrayList<String> SupportPictureExtension = new ArrayList<>();
 
     static {
         GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
@@ -35,10 +31,36 @@ public class GetImageInformation {
         GraphicsConfiguration gc = gd.getDefaultConfiguration();
         isHardwareAccelerated = gc.getBufferCapabilities().isPageFlipping();
 
-        for (int i = 0; i < readFormats.length; i++) {
-            SupportPictureExtension[i] = "." + readFormats[i].toLowerCase();
+        for (String readFormat : readFormats) {
+            SupportPictureExtension.add("." + readFormat.toLowerCase());
         }
+    }
 
+
+    //算法实现：获取图片Image对象
+    public static BufferedImage getImage(String path) {
+        try (ImageInputStream iis = ImageIO.createImageInputStream(new File(path))) {
+            Iterator<ImageReader> readers = ImageIO.getImageReaders(iis);
+            if (readers.hasNext()) {
+                ImageReader reader = readers.next();
+                reader.setInput(iis, true, true);
+                BufferedImage image = reader.read(0); // 只读取第一帧
+                reader.dispose();
+                return image;
+            }
+        } catch (Exception e) {
+            log.error(ExceptionHandler.getExceptionMessage(e));
+        }
+        return null;
+    }
+
+    //算法实现：写入图片
+    public static void writeImage(BufferedImage image, String path, String type) {
+        try (BufferedOutputStream bos = new BufferedOutputStream(new FileOutputStream(path))) {
+            ImageIO.write(image, type, bos);
+        } catch (IOException e) {
+            log.error(ExceptionHandler.getExceptionMessage(e));
+        }
     }
 
     //判断文件路径是否正确、是否为文件（非文件夹）
@@ -55,13 +77,11 @@ public class GetImageInformation {
         }
 
         String fileName = file.getName().toLowerCase();
-        for (String type : SupportPictureExtension) {
-            if (fileName.endsWith(type)) return true;
-        }
-        return false;
+        return SupportPictureExtension.contains(fileName.substring(fileName.lastIndexOf(".")));
     }
 
-    private static String bytesToHex(byte[] bytes) {
+    //算法实现：将byte数组转化为十六进制字符串
+    public static String bytesToHex(byte[] bytes) {
         StringBuilder sb = new StringBuilder();
         for (byte b : bytes) {
             sb.append(String.format("%02X", b));
@@ -110,11 +130,18 @@ public class GetImageInformation {
 
     //算法实现：获取图片大小
     public static Dimension getImageSize(File file) throws IOException {
-        if (file == null) return null;
-        Image image = ImageIO.read(file);
-        if (image == null) return null;
-        image.flush();
-        return new Dimension(image.getWidth(null), image.getHeight(null));
+        try (ImageInputStream iis = ImageIO.createImageInputStream(file)) {
+            Iterator<ImageReader> readers = ImageIO.getImageReaders(iis);
+            if (readers.hasNext()) {
+                ImageReader reader = readers.next();
+                reader.setInput(iis, true, true);
+                int width = reader.getWidth(0);
+                int height = reader.getHeight(0);
+                reader.dispose();
+                return new Dimension(width, height);
+            }
+        }
+        return null;
     }
 
     //算法实现：获取图片hashcode值（CRC32）
@@ -198,26 +225,19 @@ public class GetImageInformation {
 
 
     //算法实现：获取最佳大小、坐标
-    public static Rectangle getBestSize(String path) {
+    public static Rectangle getBestSize(String path) throws IOException {
         //如果字符串前缀与后缀包含"，则去除其中的"
         if (path.startsWith("\"") && path.endsWith("\"")) {
             path = path.substring(1, path.length() - 1);
         }
         //初始化宽度、高度
         int Width, Height, X, Y = 0;
-        //创建GetPictureSize对象
-        GetPictureSize getPictureSize = null;
-        //抛出异常
-        try {
-            getPictureSize = new GetPictureSize(path);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        Dimension PictureSize = getImageSize(new File(path));
         //初始化变量
         int SystemWidth = GetSystemSize.width;
         int SystemHeight = GetSystemSize.height;
-        int PictureWidth = getPictureSize.width;
-        int PictureHeight = getPictureSize.height;
+        int PictureWidth = PictureSize.width;
+        int PictureHeight = PictureSize.height;
         //算法实现
         Width = PictureWidth > SystemWidth * 0.8 ? (int) (SystemWidth * 0.8) : PictureWidth;
         Height = PictureHeight > SystemHeight * 0.8 ? (int) (SystemHeight * 0.8) : PictureHeight;
@@ -233,9 +253,8 @@ public class GetImageInformation {
 
     //获取当前图片路径下所有图片
     public static ArrayList<String> getCurrentPathOfPicture(String path) {
-        File[] files = new File(new File(path).getParent()).listFiles();
         ArrayList<String> arrayList = new ArrayList<>();
-        if (files != null) for (File file : files) {
+        for (File file : Objects.requireNonNull(new File(path).getParentFile().listFiles())) {
             if (GetImageInformation.isImageFile(file)) arrayList.add(file.getPath());
         }
         return arrayList;

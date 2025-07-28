@@ -2,8 +2,7 @@ package top.nserly.PicturePlayer.Version.DownloadChecker;
 
 
 import lombok.Setter;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import top.nserly.GUIStarter;
 import top.nserly.PicturePlayer.Exception.UpdateException;
 import top.nserly.PicturePlayer.Loading.Bundle;
@@ -24,6 +23,7 @@ import java.security.cert.X509Certificate;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 
+@Slf4j
 public class CheckAndDownloadUpdate {
     File f;
     @Setter
@@ -43,7 +43,6 @@ public class CheckAndDownloadUpdate {
     public long NewVersionID = 0;
     public String NewVersionName = "";
     public VersionID versionID;
-    private static final Logger logger = LoggerFactory.getLogger(CheckAndDownloadUpdate.class);
     private boolean StopToUpdate;
     // 定义选项内容
     private final Object[] options = {Bundle.getMessage("DownloadUpdateOptions_1st"), Bundle.getMessage("DownloadUpdateOptions_2nd"), Bundle.getMessage("DownloadUpdateOptions_3rd")};
@@ -83,6 +82,49 @@ public class CheckAndDownloadUpdate {
         f = new File("./download/" + startTime + "/");
     }
 
+    public static void secureConnection(boolean Enable) {
+        if (EnableSecureConnection != Enable) {
+            if (!Enable) {
+                TrustManager[] trustAllCerts = new TrustManager[]{
+                        new X509TrustManager() {
+                            public void checkClientTrusted(X509Certificate[] certs, String authType) {
+                            }
+
+                            public void checkServerTrusted(X509Certificate[] certs, String authType) {
+                            }
+
+                            public X509Certificate[] getAcceptedIssuers() {
+                                return null;
+                            }
+                        }
+                };
+                try {
+                    SSLContext sslContext = SSLContext.getInstance("TLS");
+                    sslContext.init(null, trustAllCerts, new SecureRandom());
+                    HttpsURLConnection.setDefaultSSLSocketFactory(sslContext.getSocketFactory());
+                } catch (KeyManagementException | NoSuchAlgorithmException e) {
+                    throw new RuntimeException(e);
+                }
+                HttpsURLConnection.setDefaultHostnameVerifier((hostname, session) -> true);
+                log.warn("SSL validation is turned off and your computer may be vulnerable!");
+            } else {
+                try {
+                    //重新创建默认的SSLContext
+                    SSLContext sc = SSLContext.getInstance("TLS");
+                    sc.init(null, null, null);
+                    //设置默认的SSLSocketFactory
+                    SSLSocketFactory ssf = sc.getSocketFactory();
+                    HttpsURLConnection.setDefaultSSLSocketFactory(ssf);
+                } catch (NoSuchAlgorithmException | KeyManagementException e) {
+                    log.error(e.getMessage());
+                    return;
+                }
+                log.info("SSL validation is enabled");
+            }
+        }
+        EnableSecureConnection = Enable;
+    }
+
     //更新最新版本
     public List<String> getUpdateWebSide() {
         StopToUpdate = false;
@@ -90,7 +132,7 @@ public class CheckAndDownloadUpdate {
             try {
                 return checkIfTheLatestVersion() ? downloadFileWebSite : null;
             } catch (IOException e) {
-                logger.error(e.getMessage());
+                log.error(e.getMessage());
             }
         }
         return downloadFileWebSite;
@@ -100,7 +142,7 @@ public class CheckAndDownloadUpdate {
     public boolean checkIfTheLatestVersion() throws IOException {
         StopToUpdate = false;
         isChecked = true;
-        logger.info("Checking version...");
+        log.info("Checking version...");
 
         AtomicReference<IOException> exception = new AtomicReference<>();
         FileDownloader fileDownloader = new FileDownloader(webSide, f.getPath());
@@ -139,17 +181,16 @@ public class CheckAndDownloadUpdate {
         downloadFileWebSite.add(MainFileWebSite);
 
         if (NewVersionID <= Long.parseLong(PicturePlayerVersion.getVersionID())) {
+            log.info("You are using the latest version: " + PicturePlayerVersion.getVersionID());
             return false;
         }
-        logger.info("Discover a new version");
-        return true;
-    }
-
-    //强制获取更新
-    public void ForceToGetUpdates() throws IOException {
-        if (!isChecked) {
-            checkIfTheLatestVersion();
+        log.info("New version found: " + NewVersionID + " (" + NewVersionName + ")");
+        log.info("Download file web site: " + downloadFileWebSite);
+        if (downloadFileWebSite.isEmpty()) {
+            log.warn("No files to download!");
+            return false;
         }
+        return true;
     }
 
     //一键下载所有文件(Map(Key:下载网站,Value:List[0]:文件存放路径;[1]下载类))[调用此方法时，推进使用新线程，否则窗体可能会无相应]
@@ -175,45 +216,8 @@ public class CheckAndDownloadUpdate {
             index++;
         }
         if (finalA.isEmpty()) return null;
-        logger.info("Download completed!");
+        log.info("Download completed!");
         return finalA;
-    }
-
-    public static void secureConnection(boolean Enable) {
-        if (EnableSecureConnection != Enable) {
-            if (!Enable) {
-                TrustManager[] trustAllCerts = new TrustManager[] {
-                        new X509TrustManager() {
-                            public void checkClientTrusted(X509Certificate[] certs, String authType) {}
-                            public void checkServerTrusted(X509Certificate[] certs, String authType) {}
-                            public X509Certificate[] getAcceptedIssuers() { return null; }
-                        }
-                };
-                try {
-                    SSLContext sslContext = SSLContext.getInstance("TLS");
-                    sslContext.init(null, trustAllCerts, new SecureRandom());
-                    HttpsURLConnection.setDefaultSSLSocketFactory(sslContext.getSocketFactory());
-                } catch (KeyManagementException | NoSuchAlgorithmException e) {
-                    throw new RuntimeException(e);
-                }
-                HttpsURLConnection.setDefaultHostnameVerifier((hostname, session) -> true);
-                logger.warn("SSL validation is turned off and your computer may be vulnerable!");
-            } else {
-                try {
-                    //重新创建默认的SSLContext
-                    SSLContext sc = SSLContext.getInstance("TLS");
-                    sc.init(null, null, null);
-                    //设置默认的SSLSocketFactory
-                    SSLSocketFactory ssf = sc.getSocketFactory();
-                    HttpsURLConnection.setDefaultSSLSocketFactory(ssf);
-                } catch (NoSuchAlgorithmException | KeyManagementException e) {
-                    logger.error(e.getMessage());
-                    return;
-                }
-                logger.info("SSL validation is enabled");
-            }
-        }
-        EnableSecureConnection = Enable;
     }
 
     //返回值：0.下载完成 1.跳过当前文件 2.取消下载
@@ -233,8 +237,8 @@ public class CheckAndDownloadUpdate {
                     stopToUpdate();
                 }
             });
-            logger.info("Downloading " + down);
-            if (!EnableSecureConnection) logger.warn("The connection is not secure from {}!", down);
+            log.info("Downloading " + down);
+            if (!EnableSecureConnection) log.warn("The connection is not secure from {}!", down);
             CurrentFileDownloader.startDownload();
             ArrayList list = new ArrayList();
             String cache = CurrentFileDownloader.getFinalPath();
@@ -247,7 +251,7 @@ public class CheckAndDownloadUpdate {
                 finalA.put(down, list);
             }
         } catch (UpdateException e) {
-            logger.error(e.getMessage());
+            log.error(e.getMessage());
             return 2;
         }
         if (CurrentFileDownloader.isCompleted())
@@ -265,7 +269,7 @@ public class CheckAndDownloadUpdate {
 
     //下载描述文件List[0]:文件存放路径;[1]下载类[调用此方法时，推进使用新线程，否则窗体可能会无相应]
     public List downloadDescribe() {
-        logger.info("Start downloading describe version file...");
+        log.info("Start downloading describe version file...");
         StopToUpdate = false;
         String DescribeFileWebSide = VersionID.getString(versionID.getNormalVersionDescribe(), versionID.getSpecialFields());
         if (!(DescribeFileWebSide == null) && !DescribeFileWebSide.isEmpty()) {
@@ -281,7 +285,7 @@ public class CheckAndDownloadUpdate {
     }
 
     private int exceptionHandling(IOException e) {
-        logger.error(e.getMessage());
+        log.error(e.getMessage());
         int choice = JOptionPane.showOptionDialog(null, Bundle.getMessage("DownloadUpdateError_Content") + "\n" + e, Bundle.getMessage("DownloadUpdateError_Title"), JOptionPane.DEFAULT_OPTION, JOptionPane.QUESTION_MESSAGE, null, options, options);
         return choice;
     }

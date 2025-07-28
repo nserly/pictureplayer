@@ -20,6 +20,7 @@ import java.util.ArrayList;
 public class CommandHandle {
     private static final String CURRENT_JAR_PATH; // 当前JAR文件路径
     private static final String CURRENT_JAR_NAME;//当前JAR文件路径
+    private static final String CURRENT_JAR_PARENT_PATH;
 
     private static final String MainFileSuffix;
 
@@ -27,9 +28,23 @@ public class CommandHandle {
         ClassLoader classLoader = CommandHandle.class.getClassLoader();
         URL url = classLoader.getResource(CommandHandle.class.getName().replace('.', '/') + ".class");
         if (url == null) throw new RuntimeException("Can't find the current JAR file");
-        CURRENT_JAR_PATH = url.getPath().substring(5, url.getPath().lastIndexOf("!"));
+        String path = url.getPath();
+        // 获取当前JAR文件的路径
+        CURRENT_JAR_PATH = path.substring(path.indexOf("/") + 1, path.lastIndexOf("!"));
+        // 获取当前JAR文件的名称
         CURRENT_JAR_NAME = CURRENT_JAR_PATH.substring(CURRENT_JAR_PATH.lastIndexOf("/") + 1);
+        // 生成一个随机的主文件后缀
         MainFileSuffix = RandomString.getRandomString(5);
+        // 获取当前JAR文件的父路径
+        CURRENT_JAR_PARENT_PATH = CURRENT_JAR_PATH.substring(0, CURRENT_JAR_PATH.lastIndexOf("/"));
+        // 输出当前JAR文件的路径和名称
+        log.info("Current JAR file path: {}", CURRENT_JAR_PATH);
+        // 输出当前JAR文件的名称
+        log.info("Current JAR file name: {}", CURRENT_JAR_NAME);
+        // 输出当前JAR文件的父路径
+        log.info("Current JAR file parent path: {}", CURRENT_JAR_PARENT_PATH);
+        // 输出主文件后缀
+        log.info("Main file suffix: {}", MainFileSuffix);
     }
 
 
@@ -108,28 +123,24 @@ public class CommandHandle {
 
     public static void createAndRunWindowsBatchFile(String DownloadFilePath, String OpenedPicturePath) throws IOException {
         String batchContent = "@echo off\n" +
-                        "timeout /t 3\n"
-                        + "del \".\\" + CURRENT_JAR_NAME + "\"\n"
-                        + "ren \"" + DownloadFilePath.substring(DownloadFilePath.lastIndexOf("/") + 1) + MainFileSuffix + "\" \"" + CURRENT_JAR_NAME + "\"\n" +
-                        "cls\n"
-                        + "\"" + System.getProperty("sun.boot.library.path") + "\\java.exe\" -cp \"" + CURRENT_JAR_NAME + ";lib\\*\" top.nserly.GUIStarter -Dsun.java2d.opengl=true ";
+                "timeout /t 3\n"
+                + "del \".\\" + CURRENT_JAR_NAME + "\"\n"
+                + "ren \"" + DownloadFilePath.substring(DownloadFilePath.lastIndexOf("/") + 1) + MainFileSuffix + "\" \"" + CURRENT_JAR_NAME + "\"\n" +
+                "cls\n"
+                + "\"" + System.getProperty("sun.boot.library.path") + "\\java.exe\" -Dsun.java2d.opengl=true -DNUpdate=true -cp \"" + CURRENT_JAR_NAME + ";lib\\*\" top.nserly.GUIStarter ";
         if (OpenedPicturePath != null && !OpenedPicturePath.isBlank()) {
             batchContent = batchContent + "\"" + OpenedPicturePath + "\"";
         }
 
         Charset ansiCharset = Charset.forName("GBK");
 
-        Path batchPath = Path.of("./replace.bat");
-        Files.writeString(batchPath, batchContent, ansiCharset);
-
-        batchContent = "start replace.bat";
-        batchPath = Path.of("./runnable.bat");
+        Path batchPath = Path.of(CURRENT_JAR_PARENT_PATH + "/replace.bat");
         Files.writeString(batchPath, batchContent, ansiCharset);
 
         log.info("The script file is created!");
         log.info("Start running the script file and end the current software...");
 
-        Runtime.getRuntime().exec(new String[]{"runnable.bat"});
+        Runtime.getRuntime().exec(new String[]{"cmd", "/c", "start", CURRENT_JAR_PARENT_PATH + "/replace.bat"});
         log.info("Program Termination!");
 
         GUIStarter.exitAndRecord();
@@ -144,7 +155,7 @@ public class CommandHandle {
                 "sleep 1\n"
                         + "rm " + CURRENT_JAR_NAME + "\n"
                         + "mv " + DownloadFilePath.substring(DownloadFilePath.lastIndexOf("/") + 1) + MainFileSuffix + " " + CURRENT_JAR_NAME + "\n"
-                        + "\"" + System.getProperty("sun.boot.library.path") + "\\java.exe\" -cp \"" + CURRENT_JAR_NAME + ";lib\\*\" top.nserly.GUIStarter -Dsun.java2d.opengl=true ";
+                        + "\"" + System.getProperty("sun.boot.library.path") + "\\java.exe\" -Dsun.java2d.opengl=true -DNUpdate=true -cp \"" + CURRENT_JAR_NAME + ";lib\\*\" top.nserly.GUIStarter ";
         if (OpenedPicturePath != null && !OpenedPicturePath.isBlank()) {
             shellContent = shellContent + OpenedPicturePath;
         }

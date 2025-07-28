@@ -5,13 +5,9 @@ import lombok.extern.slf4j.Slf4j;
 import top.nserly.PicturePlayer.NComponent.Compoent.PaintPicturePanel;
 import top.nserly.PicturePlayer.Utils.ImageManager.Info.GetImageInformation;
 
-import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferInt;
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Paths;
+import java.util.Objects;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.RecursiveAction;
 import java.util.concurrent.TimeUnit;
@@ -86,14 +82,7 @@ public class MultiThreadBlur {
     }
 
     public static BufferedImage getImageAndCastToTYPE_INT_RGB(String srcPath) {
-        // 使用try-with-resources确保流关闭
-        try (InputStream is = Files.newInputStream(Paths.get(srcPath))) {
-            BufferedImage simpleImage = ImageIO.read(is);
-            return GetImageInformation.castToTYPEINTRGB(simpleImage);
-        } catch (IOException e) {
-            log.error("Image loading failed", e);
-            return null;
-        }
+        return GetImageInformation.castToTYPEINTRGB(Objects.requireNonNull(GetImageInformation.getImage(srcPath)));
     }
 
     public void flushSrc() {
@@ -141,7 +130,7 @@ public class MultiThreadBlur {
             initTable();
 
         src = getImageAndCastToTYPE_INT_RGB(srcPath);
-        if(src == null) throw new NullPointerException("Image is null");
+        if (src == null) throw new NullPointerException("Image is null");
         width = src.getWidth();
         height = src.getHeight();
         srcPixels = ((DataBufferInt) src.getRaster().getDataBuffer()).getData();
