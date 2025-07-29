@@ -3,6 +3,7 @@ package top.nserly;
 import com.intellij.uiDesigner.core.GridConstraints;
 import com.intellij.uiDesigner.core.GridLayoutManager;
 import com.intellij.uiDesigner.core.Spacer;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import top.nserly.PicturePlayer.Loading.Bundle;
 import top.nserly.PicturePlayer.Loading.Init;
@@ -24,8 +25,9 @@ import top.nserly.PicturePlayer.Utils.Window.WindowLocation;
 import top.nserly.PicturePlayer.Version.DownloadChecker.CheckAndDownloadUpdate;
 import top.nserly.PicturePlayer.Version.PicturePlayerVersion;
 import top.nserly.SoftwareCollections_API.Handler.Exception.ExceptionHandler;
-import top.nserly.SoftwareCollections_API.Interaction.SoftwareInteraction.SoftwareChannel.SystemNotifications;
+import top.nserly.SoftwareCollections_API.Interaction.SoftwareInteraction.SoftwareChannel.HandleSoftwareRequestAction;
 import top.nserly.SoftwareCollections_API.Interaction.SoftwareInteraction.SoftwareChannel.WindowsAppMutex;
+import top.nserly.SoftwareCollections_API.Interaction.SystemInteraction.Notifications.SystemNotifications;
 import top.nserly.SoftwareCollections_API.OSInformation.SystemMonitor;
 import top.nserly.SoftwareCollections_API.String.StringFormation;
 
@@ -121,7 +123,6 @@ public class GUIStarter extends JFrame {
     private boolean IsFreshen;
     private static final File REPEAT_PICTURE_PATH_LOGOTYPE = new File("???");
     private static ProxyServerChooser proxyServerChooser;
-    private final TreeMap<String, ThumbnailPreviewOfImage> thumbnailPreviewOfImages = new TreeMap<>();
     private static MenuItem[] SystemTrayMenuItems;
     private static SystemTray systemTray;
     private final MouseAdapter mouseAdapter = new MouseAdapter() {
@@ -144,7 +145,7 @@ public class GUIStarter extends JFrame {
         paintPicture = new PaintPicturePanel();
     });
 
-    private static Method $$$cachedGetBundleMethod$$$ = null;
+    public static final Image SOFTWARE_FRAME_ICON = SystemNotifications.DefaultIcon.getImage();
 
     static {
         ExceptionHandler.setUncaughtExceptionHandler(log);
@@ -153,33 +154,16 @@ public class GUIStarter extends JFrame {
         init.setUpdate(true);
         log.info("The software starts running...");
         System.setProperty("sun.java2d.opengl", "true");
+        System.setProperty("flatlaf.uiScale", "auto"); // FlatLaf 自动处理缩放
         System.setProperty("file.encoding", "UTF-8");
         System.setProperty("SoftwareName", "PicturePlayer");
         log.info("SoftwareName:{}", System.getProperty("SoftwareName"));
-    }    private final DropTargetAdapter dropTargetAdapter = new DropTargetAdapter() {
-        public void drop(DropTargetDropEvent dtde) {
-            try {
-                dtde.acceptDrop(DnDConstants.ACTION_COPY);
-                Transferable transferable = dtde.getTransferable();
-                if (transferable.isDataFlavorSupported(DataFlavor.javaFileListFlavor)) {
-                    Object obj = transferable.getTransferData(DataFlavor.javaFileListFlavor);
-                    List<File> files = null;
-                    if (!(obj instanceof List<?>)) {
-                        throw new ClassCastException("Can't convert object:" + obj + "to object List<File>");
-                    }
-                    files = (List<File>) obj;
-                    File file = checkFileOpen(files);
-                    if (file != null) {
-                        openPicture(file.getPath());
-                    }
-                }
-            } catch (IOException | UnsupportedFlavorException e) {
-                log.error(ExceptionHandler.getExceptionMessage(e));
-            }
-        }
-    };
+    }
 
-    private JComboBox<String> CloseMainFrameControlComboBox;
+    @Getter
+    private final TreeMap<String, ThumbnailPreviewOfImage> thumbnailPreviewOfImages = new TreeMap<>();
+
+    private static Method $$$cachedGetBundleMethod$$$ = null;
 
     public static void main(String[] args) throws InterruptedException {
         Thread pictureFileThread = null;
@@ -225,17 +209,57 @@ public class GUIStarter extends JFrame {
         UIManager.getUIManager().setTheme(SettingsInfoHandle.getInt("ThemeMode", init.getProperties()));
         UIManager.getUIManager().applyThemeOnSetAndRefreshWindows();
         main = new GUIStarter("Picture Player(Version:" + PicturePlayerVersion.getVersion() + ")");
-        windowsAppMutex.addGetFilePathFromCreatingInstanceAction(e -> {
-            main.openPicture(e);
-        });
-        windowsAppMutex.addReceiveSoftwareVisibleDirective(e -> {
-            main.setVisible(e);
+        windowsAppMutex.addHandleSoftwareRequestAction(new HandleSoftwareRequestAction() {
+            @Override
+            public void setVisible(boolean visible) {
+                main.setVisible(visible);
+            }
+
+            @Override
+            public void receiveFile(String filePath) {
+                main.openPicture(filePath);
+            }
         });
         if (openingFilePath.get() != null && !openingFilePath.get().isBlank()) {
             main.openPicture(openingFilePath.get());
         }
         initSystemTray();
         extractedSystemInfoToLog();
+    }    private final DropTargetAdapter dropTargetAdapter = new DropTargetAdapter() {
+        public void drop(DropTargetDropEvent dtde) {
+            try {
+                dtde.acceptDrop(DnDConstants.ACTION_COPY);
+                Transferable transferable = dtde.getTransferable();
+
+                if (transferable.isDataFlavorSupported(DataFlavor.javaFileListFlavor)) {
+                    Object obj = transferable.getTransferData(DataFlavor.javaFileListFlavor);
+                    List<File> files;
+                    if (!(obj instanceof List<?>)) {
+                        throw new ClassCastException("Can't convert object:" + obj + "to object List<File>");
+                    }
+                    files = (List<File>) obj;
+                    File file = checkFileOpen(files);
+                    if (file != null) {
+                        openPicture(file.getPath());
+                    }
+                }
+            } catch (IOException | UnsupportedFlavorException e) {
+                log.error(ExceptionHandler.getExceptionMessage(e));
+            }
+        }
+    };
+
+    private JComboBox<String> CloseMainFrameControlComboBox;
+
+    public static void exitAndRecord() {
+        new Thread(() -> windowsAppMutex.close()).start();
+        closeInformation();
+        if (GUIStarter.systemTray != null) {
+            GUIStarter.systemTray.remove(SystemNotifications.DefaultIcon);
+            GUIStarter.systemTray = null;
+        }
+        log.info("Program Termination!");
+        System.exit(0);
     }
 
     //更新界面
@@ -258,17 +282,21 @@ public class GUIStarter extends JFrame {
         $$$setupUI$$$();
         init_PaintPicture.setPriority(Thread.MAX_PRIORITY);
         init_PaintPicture.start();
-        new Thread(() -> {
-            ExceptionHandler.setUncaughtExceptionHandler(log);
-            setDefaultLookAndFeelDecorated(false);
+
+        SwingUtilities.invokeLater(() -> {
+            setIconImage(SOFTWARE_FRAME_ICON);
             setContentPane(this.panel1);
             log.info("Start GUI");
             setVisible(true);
+        });
+
+        new Thread(() -> {
+            ExceptionHandler.setUncaughtExceptionHandler(log);
+            setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
             Dimension dimension = SizeOperate.FreeOfScreenSize;
             setSize((int) (dimension.getWidth() * 0.5), (int) (dimension.getHeight() * 0.6));
-            setLocation(WindowLocation.componentCenter(null, getWidth(), getHeight()));
+            setLocation(WindowLocation.desktopCenter(getWidth(), getHeight()));
             setMinimumSize(new Dimension(680, 335));
-            setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
 
             try {
                 init_PaintPicture.join();
@@ -420,7 +448,10 @@ public class GUIStarter extends JFrame {
             if (choose == JOptionPane.YES_OPTION) {
                 log.info("Saving Settings...");
                 GUIStarter.main.centre.save();
-            } else if (choose != JOptionPane.NO_OPTION) {
+                GUIStarter.main.settingRevised(false);
+            } else if (choose == JOptionPane.NO_OPTION) {
+                exitAndRecord();
+            } else {
                 return;
             }
         }
@@ -449,6 +480,7 @@ public class GUIStarter extends JFrame {
                         GUIStarter.main.centre.CurrentData.replace("CloseMainFrameControl", "1");
                         GUIStarter.main.centre.save();
                         GUIStarter.main.CloseMainFrameControlComboBox.setSelectedIndex(1);
+                        GUIStarter.main.settingRevised(false);
                     }
                     exitAndRecord();
                 }
@@ -457,6 +489,7 @@ public class GUIStarter extends JFrame {
                         GUIStarter.main.centre.CurrentData.replace("CloseMainFrameControl", "2");
                         GUIStarter.main.centre.save();
                         GUIStarter.main.CloseMainFrameControlComboBox.setSelectedIndex(2);
+                        GUIStarter.main.settingRevised(false);
                     }
                     log.info("Minimized to the system tray");
                     gotoSystemTrayAndDisposeMainFrame();
@@ -467,12 +500,6 @@ public class GUIStarter extends JFrame {
         exitControlDialog.setVisible(true);
     }
 
-    public static void exitAndRecord() {
-        closeInformation();
-        windowsAppMutex.close();
-        log.info("Program Termination!");
-        System.exit(0);
-    }
 
     //初始化所有组件设置
     private void init() {
@@ -800,38 +827,44 @@ public class GUIStarter extends JFrame {
         if (picturePath == null) return;
         HashSet<String> addition = new HashSet<>(picturePath);
 
-        LinkedList<String> cache = new LinkedList<>(thumbnailPreviewOfImages.keySet());
-        //移走所有当前列表中的图片路径不在当前显示列表
-        for (String currentBufferedPicturePath : cache) {
-            if (!addition.contains(currentBufferedPicturePath)) {
-                ThumbnailPreviewOfImage thumbnailPreviewOfImage = thumbnailPreviewOfImages.get(currentBufferedPicturePath);
-                //如果当前显示列表没有的图片路径在缩略图预览中存在，则移除
-                FileChoosePane.remove(thumbnailPreviewOfImage);
-                thumbnailPreviewOfImage.dispose();
-                thumbnailPreviewOfImages.remove(currentBufferedPicturePath);
-                addition.remove(currentBufferedPicturePath);
-            }
-        }
+        LinkedList<String> cache;
 
-        //创建当前显示列表没有的图片
-        for (String path : addition) {
-            ThumbnailPreviewOfImage thumbnailPreviewOfImage = null;
-            try {
-                thumbnailPreviewOfImage = new ThumbnailPreviewOfImage(path);
-            } catch (IOException e) {
-                log.error(ExceptionHandler.getExceptionMessage(e));
-                picturePath.remove(path);
-                continue;
+        synchronized (thumbnailPreviewOfImages) {
+            cache = new LinkedList<>(thumbnailPreviewOfImages.keySet());
+            //移走所有当前列表中的图片路径不在当前显示列表
+            for (String currentBufferedPicturePath : cache) {
+                if (!addition.contains(currentBufferedPicturePath)) {
+                    ThumbnailPreviewOfImage thumbnailPreviewOfImage = thumbnailPreviewOfImages.get(currentBufferedPicturePath);
+                    //如果当前显示列表没有的图片路径在缩略图预览中存在，则移除
+                    SwingUtilities.invokeLater(() -> {
+                        FileChoosePane.remove(thumbnailPreviewOfImage);
+                        thumbnailPreviewOfImage.dispose();
+                    });
+                    //从缩略图预览列表中移除
+                    thumbnailPreviewOfImages.remove(currentBufferedPicturePath);
+                }
             }
-            FileChoosePane.add(thumbnailPreviewOfImage);
-            thumbnailPreviewOfImages.put(path, thumbnailPreviewOfImage);
+
+            //创建当前显示列表没有的图片
+            for (String path : addition) {
+                try {
+                    ThumbnailPreviewOfImage thumbnailPreviewOfImage = new ThumbnailPreviewOfImage(path);
+                    SwingUtilities.invokeLater(() -> FileChoosePane.add(thumbnailPreviewOfImage));
+                    thumbnailPreviewOfImages.put(path, thumbnailPreviewOfImage);
+                } catch (IOException e) {
+                    log.error(ExceptionHandler.getExceptionMessage(e));
+                    picturePath.remove(path);
+                }
+            }
         }
 
         addition.clear();
         cache.clear();
 
-        FileChoosePane.revalidate();
-        FileChoosePane.repaint();
+        SwingUtilities.invokeLater(() -> {
+            FileChoosePane.revalidate();
+            FileChoosePane.repaint();
+        });
     }
 
     //获取焦点

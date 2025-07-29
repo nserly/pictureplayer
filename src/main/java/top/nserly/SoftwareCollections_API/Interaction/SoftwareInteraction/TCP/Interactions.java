@@ -19,6 +19,7 @@ public abstract class Interactions implements Callable<Integer> {
     @Getter
     public ReceviceSoftwareNameInformationAction receviceSoftwareNameInformationAction;
     private long ms;
+    private int tryCount = 0;
 
     public Interactions(Socket socket) {
         this.socket = socket;
@@ -27,12 +28,13 @@ public abstract class Interactions implements Callable<Integer> {
     @Override
     public final Integer call() throws Exception {
         while (true) {
-            if (socket.isClosed()) {
+            if (socket.isClosed() || tryCount >= 3) {
                 log.info("Socket is closed, interaction thread is terminating.(IP: {},Port: {})", socket.getInetAddress().getHostAddress(), socket.getPort());
-                throw new RuntimeException("Socket is closed, interaction thread is terminating.");
+                return 1; // 返回1表示线程结束
             }
             sendMessage = GetString.getString(socket.getInputStream());
             if (sendMessage == null || sendMessage.isBlank()) {
+                tryCount++;
                 if (ms == 0) {
                     ms = System.currentTimeMillis();
                     continue;
@@ -40,11 +42,12 @@ public abstract class Interactions implements Callable<Integer> {
                 long currentTime = System.currentTimeMillis();
                 long elapsedTime = currentTime - ms;
                 if (elapsedTime <= 10) {
-                    Thread.sleep(1000 * (12 - elapsedTime)); // 如果间隔小于10毫秒，则休眠一段时间
+                    Thread.sleep(500 * (12 - elapsedTime) * (tryCount + 1)); // 如果间隔小于10毫秒，则休眠一段时间
                 }
                 ms = System.currentTimeMillis();
                 continue;
             }
+            tryCount = 0;
             int internalResult = internalInformationProcessing();
             if (internalResult == -1) {
                 messageCall();

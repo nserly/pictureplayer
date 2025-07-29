@@ -34,8 +34,8 @@ public class TCP_ServerSocket {
     @Getter
     protected int CurrentConnect;//当前连接数
     protected ExecutorService ThreadPool;//线程池
-    protected Constructor handleClient;//处理用户
-    protected WaitForConnectClient waitForConnectClient;//用于管理等待程序
+    protected Constructor<? extends Interactions> handleClient;//处理用户
+    private WaitForConnectClient waitForConnectClient;//用于管理等待程序
     @Getter
     ArrayList<Socket> ClientSockets;//客户端套接字集合
     private ServerSocket serverSocket;
@@ -96,7 +96,7 @@ public class TCP_ServerSocket {
     }
 
     public static boolean isPortAvailable(int port) {
-        try (ServerSocket serverSocket = new ServerSocket(port)) {
+        try (ServerSocket ignored = new ServerSocket(port)) {
             return true;
         } catch (IOException e) {
             return false;
@@ -171,14 +171,15 @@ public class TCP_ServerSocket {
 
     public synchronized void checkConnectState() {
         if (ClientSockets == null) return;
-        ArrayList<Socket> cache = (ArrayList<Socket>) ClientSockets.clone();
-        Iterator<Socket> iterator = cache.iterator();
-        while (iterator.hasNext()) {
-            Socket i = iterator.next();
-            if (!i.isConnected()) {
-                iterator.remove();
-                CurrentConnect -= 1;
-                continue;
+        Set<Socket> cache = new HashSet<>(ClientSockets);
+        for (Socket i : cache) {
+            if (i.isClosed()) {
+                try {
+                    i.close();
+                } catch (IOException ignored) {
+                    ClientSockets.remove(i);
+                    CurrentConnect -= 1;
+                }
             }
             try {
                 i.sendUrgentData(1);
@@ -188,11 +189,10 @@ public class TCP_ServerSocket {
                 } catch (IOException ignored) {
 
                 }
-                iterator.remove();
+                ClientSockets.remove(i);
                 CurrentConnect -= 1;
             }
         }
-        ClientSockets = cache;
     }
 
     public void close() throws IOException {
@@ -260,9 +260,11 @@ class WaitForConnectClient implements Runnable {
             if (end) break;
             try {
                 Socket socket = ServerSocket.accept();
+                log.info("new connection request from {}", socket.getInetAddress().getHostAddress());
                 //查看当前连接数是否达到极限
-                if (tcpServerSocket.CurrentConnect > tcpServerSocket.MaxConnect) {
+                if (tcpServerSocket.MaxConnect != -1 && tcpServerSocket.CurrentConnect > tcpServerSocket.MaxConnect) {
                     socket.close();
+                    log.info("connection refused ({}),Caused by:Current Connection counts has been over MaxConnect({})", socket.getInetAddress().getHostAddress(), tcpServerSocket.MaxConnect);
                     continue;
                 }
                 //查看是否在黑名单列表中
@@ -270,6 +272,7 @@ class WaitForConnectClient implements Runnable {
                     for (String s : tcpServerSocket.BlackList) {
                         if (s.equals(socket.getInetAddress().getHostAddress())) {
                             socket.close();
+                            log.info("connection refused ({}),Caused by:Address is in BlackList", socket.getInetAddress().getHostAddress());
                             continue a;
                         }
                     }
@@ -278,6 +281,7 @@ class WaitForConnectClient implements Runnable {
                 if (tcpServerSocket.CheckForClient != null)
                     if (!tcpServerSocket.CheckForClient.Check(socket)) {
                         socket.close();
+                        log.info("connection refused ({}),Caused by:Developer's definition", socket.getInetAddress().getHostAddress());
                         continue;
                     }
 
@@ -289,10 +293,10 @@ class WaitForConnectClient implements Runnable {
 
                 if (tcpServerSocket.ThreadPool == null) {
                     //如果线程池为空，则创建一个新的线程池
-                    tcpServerSocket.ThreadPool = Executors.newFixedThreadPool(tcpServerSocket.MaxConnect);
+                    tcpServerSocket.ThreadPool = Executors.newFixedThreadPool(tcpServerSocket.MaxConnect == -1 ? 999 : tcpServerSocket.MaxConnect);
                 }
                 //创建多线程，用来与用户交互
-                tcpServerSocket.ThreadPool.execute(new FutureTask<>((Interactions) tcpServerSocket.handleClient.newInstance(socket)));
+                tcpServerSocket.ThreadPool.execute(new FutureTask<>(tcpServerSocket.handleClient.newInstance(socket)));
                 tcpServerSocket.CurrentConnect += 1;
             } catch (IOException e) {
                 if (end) break;

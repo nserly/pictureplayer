@@ -48,28 +48,32 @@ public abstract class UIManager {
 
     //更新所有窗体
     public synchronized static void updateAllWindows() {
-        for (Window window : Window.getWindows()) {
-            if (window.isShowing()) {
-                window.dispose();
+        SwingUtilities.invokeLater(() -> {
+            for (Window window : Window.getWindows()) {
+                if (window.isShowing()) {
+                    window.dispose();
+                    FontPreservingUIUpdater.updateComponentTreeUIWithFontPreservation(window);
+                    window.setVisible(true);
+                    continue;
+                }
                 FontPreservingUIUpdater.updateComponentTreeUIWithFontPreservation(window);
-                window.setVisible(true);
-                continue;
             }
-            FontPreservingUIUpdater.updateComponentTreeUIWithFontPreservation(window);
-        }
+        });
     }
 
     //更新所有所选窗体
     public synchronized static void updateChoiceWindows(List<Window> windowsCollections) {
-        for (Window window : windowsCollections) {
-            if (window.isShowing()) {
-                window.dispose();
-                FontPreservingUIUpdater.updateComponentTreeUIWithFontPreservation(window);
-                window.setVisible(true);
-            } else {
-                FontPreservingUIUpdater.updateComponentTreeUIWithFontPreservation(window);
+        SwingUtilities.invokeLater(() -> {
+            for (Window window : windowsCollections) {
+                if (window.isShowing()) {
+                    window.dispose();
+                    FontPreservingUIUpdater.updateComponentTreeUIWithFontPreservation(window);
+                    window.setVisible(true);
+                } else {
+                    FontPreservingUIUpdater.updateComponentTreeUIWithFontPreservation(window);
+                }
             }
-        }
+        });
     }
 
     public static UIManager getUIManager() {

@@ -41,6 +41,7 @@ public class DownloadUpdateFrame extends JFrame {
         Title.setText(formation.getProcessingString());
         downloadUpdate = update;
         DownloadCounting.setText(DownloadCounting.getText() + "\n{current}/{total}");
+        setIconImage(GUIStarter.SOFTWARE_FRAME_ICON);
         pack();
         setSize(getWidth(), 200);
         setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);

@@ -79,12 +79,14 @@ public class PaintPicturePanel extends JPanel {
     Dimension ShowingSize;
     //图片渲染器在屏幕上的坐标
     Point LocationOnScreen;
-    //缩放比例标签
-    JLabel percentLabel;
+    //图片信息模板
+    public PictureInformationViewer pictureInformationViewer;
     //图片比例管理
     public SizeOperate sizeOperate;
     //图片渲染管理
     public ImageCanvas imageCanvas;
+    //缩放比例标签
+    PercentLabel percentLabel;
     //移动图片时，鼠标最开始的坐标（对于桌面）
     Point mouseLocation;
     @Getter
@@ -100,6 +102,7 @@ public class PaintPicturePanel extends JPanel {
     //图片全屏窗体
     public FullScreenFrame fullScreenWindow;
     private JPanel MainPanel;
+    private JButton MorePictureInfoButton;
 
     //构造方法（函数）（用于直接显示图片）
     public PaintPicturePanel(String path) {
@@ -121,6 +124,7 @@ public class PaintPicturePanel extends JPanel {
             ExceptionHandler.setUncaughtExceptionHandler(log);
             setLayout(new BorderLayout());
             fullScreenWindow = new FullScreenFrame();
+            pictureInformationViewer = new PictureInformationViewer(GUIStarter.main);
             //创建画布
             imageCanvas = new ImageCanvas();
             sizeOperate = new SizeOperate(imageCanvas, null);
@@ -141,7 +145,6 @@ public class PaintPicturePanel extends JPanel {
             PercentSlider.setMinimum(sizeOperate.MinPercent);
 
             //设置文本中显示的图片缩放比例
-            PercentLabel percentLabel = (PercentLabel) this.percentLabel;
             percentLabel.set((int) sizeOperate.getPercent());
             //设置图片缩放滑动条
             PercentSlider.setValue((int) sizeOperate.getPercent());
@@ -235,6 +238,21 @@ public class PaintPicturePanel extends JPanel {
             }
         });
 
+
+        MorePictureInfoButton.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (imageCanvas.getPath() != null && !imageCanvas.getPath().equals(pictureInformationViewer.getPicturePath())) {
+                    try {
+                        pictureInformationViewer.update(GetImageInformation.getImageHandle(new File(imageCanvas.getPath())));
+                    } catch (IOException ex) {
+                        log.error(ExceptionHandler.getExceptionMessage(ex));
+                    }
+                }
+                pictureInformationViewer.setVisible(true);
+            }
+        });
+
         PercentSlider.addMouseListener(new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent e) {
@@ -249,7 +267,6 @@ public class PaintPicturePanel extends JPanel {
 
         PercentSlider.addChangeListener(e -> {
             if (isMousePressed) {
-                PercentLabel percentLabel = (PercentLabel) this.percentLabel;
                 percentLabel.set(PercentSlider.getValue());
                 sizeOperate.setPercent(PercentSlider.getValue());
                 sizeOperate.update(false);
@@ -270,17 +287,16 @@ public class PaintPicturePanel extends JPanel {
 
                 // 创建一个新的 ScheduledExecutorService
                 executor = Executors.newSingleThreadScheduledExecutor();
-                Runnable task = () -> {
+
+                // 每 16 毫秒执行一次任务
+                executor.scheduleAtFixedRate(() -> {
                     if (!reduceButton.isEnabled()) {
                         return;
                     }
                     if (sizeOperate.adjustPercent(SizeOperate.Reduce)) {
                         sizeOperate.update(false);
                     }
-                };
-
-                // 每 16 毫秒执行一次任务
-                executor.scheduleAtFixedRate(task, 0, 16, TimeUnit.MILLISECONDS);
+                }, 0, 16, TimeUnit.MILLISECONDS);
             }
 
             // 鼠标释放触发
@@ -309,17 +325,16 @@ public class PaintPicturePanel extends JPanel {
 
                 // 创建一个新的 ScheduledExecutorService
                 executor = Executors.newSingleThreadScheduledExecutor();
-                Runnable task = () -> {
+
+                // 每 16 毫秒执行一次任务
+                executor.scheduleAtFixedRate(() -> {
                     if (!enlargeButton.isEnabled()) {
                         return;
                     }
                     if (sizeOperate.adjustPercent(SizeOperate.Enlarge)) {
                         sizeOperate.update(false);
                     }
-                };
-
-                // 每 16 毫秒执行一次任务
-                executor.scheduleAtFixedRate(task, 0, 16, TimeUnit.MILLISECONDS);
+                }, 0, 16, TimeUnit.MILLISECONDS);
             }
 
             // 鼠标释放触发
@@ -334,16 +349,11 @@ public class PaintPicturePanel extends JPanel {
         });
     }
 
-    private void createUIComponents() {
-        // TODO: place custom component creation code here
-        percentLabel = new PercentLabel();
-    }
-
     //显示图片大小、分辨率等信息
     private void setPictureInformationOnComponent(BufferedImage bufferedImage, String path) {
         if (PictureSize == null) return;
         File PictureFile = new File(path);
-        Dimension dimension = new Dimension(bufferedImage.getWidth(), getHeight());
+        Dimension dimension = new Dimension(bufferedImage.getWidth(), bufferedImage.getHeight());
         PictureSize.setText(AdvancedDownloadSpeed.formatBytes(PictureFile.length()));
         PictureResolution.setText((int) dimension.getWidth() + "x" + (int) dimension.getHeight());
     }
@@ -382,7 +392,6 @@ public class PaintPicturePanel extends JPanel {
      * @noinspection ALL
      */
     private void $$$setupUI$$$() {
-        createUIComponents();
         MainPanel = new JPanel();
         MainPanel.setLayout(new BorderLayout(0, 0));
         MainPanel.setRequestFocusEnabled(false);
@@ -406,8 +415,8 @@ public class PaintPicturePanel extends JPanel {
         clockwise.setRequestFocusEnabled(false);
         this.$$$loadButtonText$$$(clockwise, this.$$$getMessageFromBundle$$$("messages", "Display_RotateClockwiseButton"));
         AboveMainPanel.add(clockwise);
-        percentLabel.setRequestFocusEnabled(false);
-        percentLabel.setText("");
+        percentLabel = new PercentLabel();
+        percentLabel.setText("0%");
         AboveMainPanel.add(percentLabel);
         BelowMainPanel = new JPanel();
         BelowMainPanel.setLayout(new BorderLayout(1, 2));
@@ -429,6 +438,9 @@ public class PaintPicturePanel extends JPanel {
         PictureSize.setRequestFocusEnabled(false);
         PictureSize.setText("");
         SouthLeftPanel.add(PictureSize);
+        MorePictureInfoButton = new JButton();
+        this.$$$loadButtonText$$$(MorePictureInfoButton, this.$$$getMessageFromBundle$$$("messages", "PictureViewer_MorePictureInfoButton"));
+        SouthLeftPanel.add(MorePictureInfoButton);
         SouthRightPanel = new JPanel();
         SouthRightPanel.setLayout(new FlowLayout(FlowLayout.RIGHT, 5, 5));
         SouthRightPanel.setRequestFocusEnabled(false);
@@ -613,8 +625,9 @@ public class PaintPicturePanel extends JPanel {
         }
 
         //设置低占用模式
-        public void setLowOccupancyMode(boolean isLowOccupancyMode) {
+        public synchronized void setLowOccupancyMode(boolean isLowOccupancyMode) {
             if (this.isLowOccupancyMode == isLowOccupancyMode) return;
+            this.isLowOccupancyMode = isLowOccupancyMode;
             if (isLowOccupancyMode) {
                 if (timer != null)
                     timer.stop();
@@ -640,7 +653,6 @@ public class PaintPicturePanel extends JPanel {
                     }).start();
                 }
             }
-            this.isLowOccupancyMode = isLowOccupancyMode;
         }
 
         //图片左转
@@ -657,7 +669,7 @@ public class PaintPicturePanel extends JPanel {
         //重置旋转度数
         public void reSetDegrees() {
             RotationDegrees = 0;
-            if (lastRotationDegrees != RotationDegrees) sizeOperate.changeCanvas(this);
+            if (lastRotationDegrees != RotationDegrees) sizeOperate.changeCanvas(this, true);
         }
 
 
@@ -673,7 +685,7 @@ public class PaintPicturePanel extends JPanel {
         private void setDegrees(int Degrees) {
             RotationDegrees = (byte) (Degrees % 4);
             if (RotationDegrees < 0) RotationDegrees = (byte) (4 + RotationDegrees);
-            sizeOperate.changeCanvas(this);
+            sizeOperate.changeCanvas(this, true);
         }
 
         //获取度数
@@ -693,28 +705,41 @@ public class PaintPicturePanel extends JPanel {
         }
 
         public void changePicturePath(final BufferedImage image, String path, String picture_hashcode) {
+            if (image == null) throw new RuntimeException("Image is null, cannot change picture path.");
             //如果字符串前缀与后缀包含"，则去除其中的"
             if (path.startsWith("\"") && path.endsWith("\"")) {
                 path = path.substring(1, path.length() - 1);
             }
 
             timer.stop();
-            this.path = path;
-            this.picture_hashcode = picture_hashcode;
-            LastPercent = lastWidth = lastHeight = X = Y = mouseX = mouseY = RotationDegrees = lastRotationDegrees = 0;
-            NewWindow = LastWindow = null;
-            if (this.image != null) this.image.flush();
-            if (BlurBufferedImage != null) BlurBufferedImage.flush();
+            boolean isRepeat = path.equals(this.path) && picture_hashcode.equals(this.picture_hashcode);
+
+            if (!isRepeat) {
+                this.path = path;
+                this.picture_hashcode = picture_hashcode;
+                LastPercent = lastWidth = lastHeight = X = Y = mouseX = mouseY = RotationDegrees = lastRotationDegrees = 0;
+                NewWindow = LastWindow = null;
+                if (this.image != null) this.image.flush();
+                if (BlurBufferedImage != null) BlurBufferedImage.flush();
+            }
             this.image = image;
+            if (sizeOperate != null) sizeOperate.changeCanvas(this, !isRepeat);
 
             String finalPath = path;
+
+            if (isLowOccupancyMode)
+                isLowOccupancyMode = false;
+
+
             new Thread(() -> {
-                setPictureInformationOnComponent(image, finalPath);
+                //设置当前图片路径下图片信息
+                if (!isRepeat)
+                    setPictureInformationOnComponent(image, finalPath);
                 //若这两个文件父目录不相同
+                //则加载当前图片路径下所有图片
                 loadPictureInTheParent(finalPath);
             }).start();
-            if (sizeOperate != null) sizeOperate.changeCanvas(this);
-            if (isEnableHardware) {
+            if (isEnableHardware && !isRepeat) {
                 new Thread(() -> {
                     BlurBufferedImage = GetImageInformation.castToTYPEINTRGB(image);
                     synchronized (multiThreadBlur) {
@@ -814,14 +839,17 @@ public class PaintPicturePanel extends JPanel {
 
         @Override
         public synchronized void paint(Graphics g) {
-            if (isLowOccupancyMode) setLowOccupancyMode(false);
-            if (NewWindow == null || NewWindow.width == 0 || NewWindow.height == 0
+            if (isLowOccupancyMode) {
+                setLowOccupancyMode(false);
+            }
+            //如果没有图片，直接返回
+            if (isLowOccupancyMode || NewWindow == null || NewWindow.width == 0 || NewWindow.height == 0
                     || (LastPercent == sizeOperate.getPercent() && RotationDegrees == LastPercent
                     && !isMove && lastPath.equals(path)) || getImageWidth() == 0 || getImageHeight() == 0) {
                 g.dispose();
-                g = null;
                 return;
             }
+
             // 获取当前图形环境配置
             timer.stop();
             double FinalX = X, FinalY = Y;
@@ -839,7 +867,6 @@ public class PaintPicturePanel extends JPanel {
                 graphics2D.drawImage(BlurBufferedImage, (int) X, (int) Y, (int) lastWidth, (int) lastHeight, null);
                 isNeedBlurToView = false;
                 g.dispose();
-                g = graphics2D = null;
                 return;
             }
             //如果转动角度为0或180度，请无使用此值，此值为旋转其他度数的设计
@@ -905,7 +932,6 @@ public class PaintPicturePanel extends JPanel {
                     timer.start();
                 }
                 g.dispose();
-                g = graphics2D = null;
                 return;
             }
             //判断图片缩放比例是否与上次相同
@@ -942,7 +968,6 @@ public class PaintPicturePanel extends JPanel {
             }
             if (PictureChangeRatio == 0) {
                 g.dispose();
-                g = graphics2D = null;
                 return;
             }
             width = (getImageWidth() * sizeOperate.getPercent() / 100 * (1 / PictureChangeRatio));
@@ -1015,7 +1040,6 @@ public class PaintPicturePanel extends JPanel {
                 if (!paintPicture.reduceButton.isEnabled()) imageCanvas.requestFocus();
             }
 
-            PercentLabel percentLabel = (PercentLabel) PaintPicturePanel.paintPicture.percentLabel;
             //设置文本中显示的图片缩放比例
             percentLabel.set((int) sizeOperate.getPercent());
             //设置图片缩放滑动条
@@ -1033,7 +1057,6 @@ public class PaintPicturePanel extends JPanel {
                 timer.start();
             }
             g.dispose();
-            g = graphics2D = null;
         }
 
         //设置是否图片移动（不应该改变图片大小）

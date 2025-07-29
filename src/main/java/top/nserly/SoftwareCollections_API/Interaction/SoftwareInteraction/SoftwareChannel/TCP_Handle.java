@@ -31,16 +31,16 @@ public final class TCP_Handle extends Interactions {
             String filePath = message.trim();
             filePath = filePath.substring(filePath.indexOf(" "));
             log.info("Received file path: {}", filePath);
-            if (windowsAppMutex.getReceiveFileAction() != null) {
-                windowsAppMutex.getReceiveFileAction().receiveFile(filePath.trim());
+            if (windowsAppMutex.getHandleSoftwareRequestAction() != null) {
+                windowsAppMutex.getHandleSoftwareRequestAction().receiveFile(filePath.trim());
             } else {
                 log.warn("No action defined to handle received file path.");
             }
         } else if (message.startsWith("{getSoftwareVisibleDirective} ")) {
             String softwareVisibleDirective = message.trim();
             softwareVisibleDirective = softwareVisibleDirective.substring(softwareVisibleDirective.indexOf(" "));
-            if (windowsAppMutex.getReceiveSoftwareVisibleDirectiveAction() != null) {
-                windowsAppMutex.getReceiveSoftwareVisibleDirectiveAction().setVisible(Boolean.parseBoolean(softwareVisibleDirective.trim()));
+            if (windowsAppMutex.getHandleSoftwareRequestAction() != null) {
+                windowsAppMutex.getHandleSoftwareRequestAction().setVisible(Boolean.parseBoolean(softwareVisibleDirective.trim()));
             } else {
                 log.warn("No action defined to handle software visible directive.");
             }

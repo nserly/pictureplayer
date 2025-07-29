@@ -3,6 +3,7 @@ package top.nserly.SoftwareCollections_API.Interaction.SystemInteraction.Screen;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import top.nserly.SoftwareCollections_API.Handler.Exception.ExceptionHandler;
+import top.nserly.SoftwareCollections_API.Interaction.SystemInteraction.Screen.Windows.WindowsScreenProvider;
 
 import java.awt.*;
 import java.util.List;
@@ -105,8 +106,8 @@ public class ScreenManager {
      */
     public static ScreenInfo getScreenAt(int x, int y) {
         for (ScreenInfo screen : allScreens) {
-            if (x >= screen.getX() && x < screen.getX() + screen.getScreenSize().width &&
-                    y >= screen.getY() && y < screen.getY() + screen.getScreenSize().height) {
+            if (x >= screen.x() && x < screen.x() + screen.screenSize().width &&
+                    y >= screen.y() && y < screen.y() + screen.screenSize().height) {
                 return screen;
             }
         }
@@ -122,13 +123,13 @@ public class ScreenManager {
             return new Dimension(0, 0);
         }
 
-        int minX = allScreens.stream().mapToInt(ScreenInfo::getX).min().orElse(0);
-        int minY = allScreens.stream().mapToInt(ScreenInfo::getY).min().orElse(0);
+        int minX = allScreens.stream().mapToInt(ScreenInfo::x).min().orElse(0);
+        int minY = allScreens.stream().mapToInt(ScreenInfo::y).min().orElse(0);
         int maxX = allScreens.stream()
-                .mapToInt(s -> s.getX() + s.getScreenSize().width)
+                .mapToInt(s -> s.x() + s.screenSize().width)
                 .max().orElse(0);
         int maxY = allScreens.stream()
-                .mapToInt(s -> s.getY() + s.getScreenSize().height)
+                .mapToInt(s -> s.y() + s.screenSize().height)
                 .max().orElse(0);
 
         return new Dimension(maxX - minX, maxY - minY);

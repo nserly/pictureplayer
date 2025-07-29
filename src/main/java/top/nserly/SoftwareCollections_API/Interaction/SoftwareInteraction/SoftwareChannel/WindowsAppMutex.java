@@ -7,8 +7,7 @@ import top.nserly.SoftwareCollections_API.Interaction.SoftwareInteraction.TCP.Cl
 import top.nserly.SoftwareCollections_API.Interaction.SoftwareInteraction.TCP.Server.TCP_ServerSocket;
 
 import java.io.IOException;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeoutException;
+import java.util.concurrent.*;
 
 @Slf4j
 public class WindowsAppMutex {
@@ -19,9 +18,7 @@ public class WindowsAppMutex {
     private TCP_ServerSocket tcpServerSocket;
     private TCP_Client tcpClient;
     @Getter
-    private ReceiveFileAction receiveFileAction;
-    @Getter
-    private ReceiveSoftwareVisibleDirectiveAction receiveSoftwareVisibleDirectiveAction;
+    private HandleSoftwareRequestAction handleSoftwareRequestAction;
 
     @Getter
     private boolean isSupportedSoftwareName = true;
@@ -43,22 +40,18 @@ public class WindowsAppMutex {
             }
         } else {
             TCP_Handle.setWindowsAppMutex(this);
-            tcpServerSocket = new TCP_ServerSocket(port, 2, TCP_Handle.class);
+            tcpServerSocket = new TCP_ServerSocket(port, -1, TCP_Handle.class);
             tcpServerSocket.setCheckForClient(event -> {
                 String hostAddress = event.getInetAddress().getHostAddress();
                 log.info("New client connected: (IP: {},Port: {})", hostAddress, event.getPort());
                 return "127.0.0.1".equals(hostAddress) || "::1".equals(hostAddress);
             });
-            new Thread(() -> {
-                while (true) {
-                    tcpServerSocket.checkAndGetClientSockets();
-                    try {
-                        Thread.sleep(6000); // 每60秒检查一次
-                    } catch (InterruptedException e) {
-                        throw new RuntimeException(e);
-                    }
-                }
-            }).start();
+
+            // 每60秒检查一次
+            try (ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor()) {
+                executor.scheduleAtFixedRate(() -> tcpServerSocket.checkConnectState(), 0, 30, TimeUnit.SECONDS);
+            }
+
             try {
                 tcpServerSocket.start();
             } catch (IOException e) {
@@ -99,17 +92,11 @@ public class WindowsAppMutex {
         }
     }
 
-    //接收文件路径消息
-    public void addGetFilePathFromCreatingInstanceAction(ReceiveFileAction receiveFileAction) {
-        if (receiveFileAction == null) throw new IllegalArgumentException("ReceiveFileAction cannot be null");
-        this.receiveFileAction = receiveFileAction;
-    }
-
-    //接收软件显示信号
-    public void addReceiveSoftwareVisibleDirective(ReceiveSoftwareVisibleDirectiveAction receiveSoftwareVisibleDirectiveAction) {
-        if (receiveSoftwareVisibleDirectiveAction == null)
+    //接收软件请求信号
+    public void addHandleSoftwareRequestAction(HandleSoftwareRequestAction handleSoftwareRequestAction) {
+        if (handleSoftwareRequestAction == null)
             throw new IllegalArgumentException("ReceiveSoftwareVisibleDirectiveAction cannot be null");
-        this.receiveSoftwareVisibleDirectiveAction = receiveSoftwareVisibleDirectiveAction;
+        this.handleSoftwareRequestAction = handleSoftwareRequestAction;
     }
 
     //关闭

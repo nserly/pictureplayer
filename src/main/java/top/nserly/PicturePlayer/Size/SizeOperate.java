@@ -40,13 +40,13 @@ public class SizeOperate {
         //获取屏幕分辨率
         //注意：此处获取的是主屏幕的分辨率，如果有多屏幕环境，可能需要根据实际情况调整
         //如果使用JNA或其他库获取屏幕信息，请确保已正确配置相关依赖
-        ScreenSize = ScreenManager.getPrimaryScreen().getScreenSize();
+        ScreenSize = ScreenManager.getPrimaryScreen().screenSize();
         //获取可用屏幕分辨率
         //可用屏幕分辨率通常是指不包括任务栏等占用的区域
         //如果有多屏幕环境，可能需要根据实际情况调整
         //注意：此处获取的是主屏幕的可用分辨率，如果有多屏幕环境，可能需要根据实际情况调整
         //如果使用JNA或其他库获取屏幕信息，请确保已正确配置相关依赖
-        FreeOfScreenSize = ScreenManager.getPrimaryScreen().getUsableScreenSize();
+        FreeOfScreenSize = ScreenManager.getPrimaryScreen().usableScreenSize();
     }
 
     public SizeOperate(PaintPicturePanel.ImageCanvas imageCanvas, Dimension Component) {
@@ -63,7 +63,7 @@ public class SizeOperate {
     }
 
     //改变图片渲染器
-    public void changeCanvas(PaintPicturePanel.ImageCanvas imageCanvas) {
+    public void changeCanvas(PaintPicturePanel.ImageCanvas imageCanvas, boolean isRestoreFittest) {
         this.imageCanvas = imageCanvas;
         if (imageCanvas.getPath() != null) {
             PictureSize = new Dimension(imageCanvas.getImageWidth(), imageCanvas.getImageHeight());
@@ -72,8 +72,10 @@ public class SizeOperate {
             }
         }
         FittestPercent = getPictureOptimalSize();
-        setPercent(FittestPercent);
-        update(false);
+        if (isRestoreFittest) {
+            setPercent(FittestPercent);
+            update(false);
+        }
     }
 
     //获取窗体大小

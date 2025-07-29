@@ -1,7 +1,6 @@
 package top.nserly.SoftwareCollections_API.Interaction.SoftwareInteraction.TCP.Client;
 
 import lombok.Getter;
-import top.nserly.SoftwareCollections_API.Collections.SameThreadCollections;
 import top.nserly.SoftwareCollections_API.Interaction.SoftwareInteraction.TCP.Interactions;
 
 import java.io.IOException;
@@ -9,7 +8,10 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.concurrent.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.FutureTask;
+import java.util.concurrent.TimeoutException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -21,14 +23,11 @@ public class TCP_Client {
     private static final String DomainName_REGEX =
             "^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z]{2,6}$";
 
-    static SameThreadCollections<Socket> sameThreadCollections;
-
-    static {
-        sameThreadCollections = new SameThreadCollections<>();
-    }
+    @Getter
+    static Socket socket;
 
     // 声明一个Class类型的变量interactions，用于存储Runnable的子类
-    private final Class<? extends Callable> interactions;
+    private final Class<? extends Interactions> interactions;
     Interactions interaction = null;
     @Getter
     private String ServerIP;//服务器IP地址
@@ -93,33 +92,33 @@ public class TCP_Client {
     public void connect() throws IOException {
         String IP = ServerIP;
         int Port = ServerPort;
-        sameThreadCollections.Add(new Socket(IP, Port));
-        Constructor constructor = null;
+        socket = new Socket(IP, Port);
+        Constructor<? extends Interactions> constructor = null;
         try {
             constructor = interactions.getConstructor(Socket.class);
-            interaction = (Interactions) constructor.newInstance(sameThreadCollections.Get());
+            interaction = constructor.newInstance(socket);
         } catch (NoSuchMethodException | InvocationTargetException | InstantiationException |
                  IllegalAccessException e) {
             throw new RuntimeException(e);
         }
-        FutureTask futureTask = new FutureTask<>(interaction);
+        FutureTask<Integer> futureTask = new FutureTask<>(interaction);
         t = new Thread(futureTask);
         t.start();
     }
 
     public void send(String message) throws IOException {
-        getSocket().getOutputStream().write(message.getBytes());
-        getSocket().getOutputStream().flush();
+        socket.getOutputStream().write(message.getBytes());
+        socket.getOutputStream().flush();
     }
 
     public void close() throws IOException {
         t.interrupt();
         t = null;
-        sameThreadCollections.Get().close();
+        socket.close();
     }
 
     public String getServerSupportedSoftwareName() throws IOException, ExecutionException, InterruptedException, TimeoutException {
-        if (getSocket().isClosed()) throw new RuntimeException("TCP_Client is not connected.");
+        if (socket.isClosed()) throw new RuntimeException("TCP_Client is not connected.");
 
         CompletableFuture<String> future = new CompletableFuture<>();
 
@@ -138,7 +137,4 @@ public class TCP_Client {
         return getServerSupportedSoftwareName().equals(System.getProperty("SoftwareName"));
     }
 
-    public Socket getSocket() {
-        return sameThreadCollections.Get();
-    }
 }

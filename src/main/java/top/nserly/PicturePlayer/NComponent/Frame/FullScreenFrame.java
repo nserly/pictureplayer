@@ -1,5 +1,6 @@
 package top.nserly.PicturePlayer.NComponent.Frame;
 
+import top.nserly.GUIStarter;
 import top.nserly.PicturePlayer.NComponent.Compoent.PaintPicturePanel;
 import top.nserly.PicturePlayer.Size.SizeOperate;
 
@@ -24,6 +25,7 @@ public class FullScreenFrame extends JFrame {
     }
 
     private void init() {
+        setIconImage(GUIStarter.SOFTWARE_FRAME_ICON);
         setUndecorated(true);
         setSize(SizeOperate.FreeOfScreenSize);
         getContentPane().add(panel1);
@@ -47,6 +49,7 @@ public class FullScreenFrame extends JFrame {
         super.setVisible(visible);
         if (visible && imageCanvas != null) {
             imageCanvas.requestFocusInWindow();
+            imageCanvas.repaint();
         }
     }
 
