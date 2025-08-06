@@ -1,6 +1,6 @@
 package Generate.VersionID;
 
-import top.nserly.PicturePlayer.NComponent.Compoent.PaintPicturePanel;
+import top.nserly.PicturePlayer.NComponent.Component.PaintPicturePanel;
 
 import javax.swing.*;
 import java.awt.*;

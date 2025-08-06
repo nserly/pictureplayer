@@ -1,0 +1,168 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<form xmlns="http://www.intellij.com/uidesigner/form/" version="1" bind-to-class="top.nserly.PicturePlayer.NComponent.Component.PictureInformationViewer">
+  <scrollpane id="1cd96" binding="MainPanel">
+    <constraints>
+      <xy x="20" y="20" width="461" height="240"/>
+    </constraints>
+    <properties/>
+    <border type="none"/>
+    <children>
+      <grid id="27dc6" binding="panel1" default-binding="true" layout-manager="GridLayoutManager" row-count="9" column-count="2" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="-1">
+        <margin top="0" left="0" bottom="0" right="0"/>
+        <constraints/>
+        <properties>
+          <requestFocusEnabled value="false"/>
+        </properties>
+        <border type="none"/>
+        <children>
+          <vspacer id="6ded4">
+            <constraints>
+              <grid row="8" column="0" row-span="1" col-span="2" vsize-policy="6" hsize-policy="1" anchor="0" fill="2" indent="0" use-parent-layout="false"/>
+            </constraints>
+          </vspacer>
+          <component id="65071" class="javax.swing.JLabel">
+            <constraints>
+              <grid row="1" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+            </constraints>
+            <properties>
+              <font size="12"/>
+              <requestFocusEnabled value="false"/>
+              <text resource-bundle="messages" key="PictureInfoViewer_PictureNameLabel"/>
+            </properties>
+          </component>
+          <component id="5d772" class="javax.swing.JLabel">
+            <constraints>
+              <grid row="0" column="0" row-span="1" col-span="2" vsize-policy="0" hsize-policy="0" anchor="0" fill="0" indent="0" use-parent-layout="false"/>
+            </constraints>
+            <properties>
+              <font size="20"/>
+              <requestFocusEnabled value="false"/>
+              <text resource-bundle="messages" key="PictureInfoViewer_Title"/>
+            </properties>
+          </component>
+          <component id="f2bb2" class="javax.swing.JTextField" binding="PictureNameTextField">
+            <constraints>
+              <grid row="1" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false">
+                <preferred-size width="150" height="-1"/>
+              </grid>
+            </constraints>
+            <properties>
+              <requestFocusEnabled value="false"/>
+            </properties>
+          </component>
+          <component id="9d837" class="javax.swing.JLabel">
+            <constraints>
+              <grid row="3" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+            </constraints>
+            <properties>
+              <font size="12"/>
+              <requestFocusEnabled value="false"/>
+              <text resource-bundle="messages" key="PictureInfoViewer_PictureSizeLabel"/>
+            </properties>
+          </component>
+          <component id="b901e" class="javax.swing.JLabel" binding="PictureSizeInfoLabel">
+            <constraints>
+              <grid row="3" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+            </constraints>
+            <properties>
+              <requestFocusEnabled value="false"/>
+              <text value=""/>
+            </properties>
+          </component>
+          <component id="127d9" class="javax.swing.JLabel">
+            <constraints>
+              <grid row="4" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+            </constraints>
+            <properties>
+              <font size="12"/>
+              <requestFocusEnabled value="false"/>
+              <text resource-bundle="messages" key="PictureInfoViewer_PictureTypeLabel"/>
+            </properties>
+          </component>
+          <component id="eca65" class="javax.swing.JLabel" binding="PictureTypeInfoLabel">
+            <constraints>
+              <grid row="4" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+            </constraints>
+            <properties>
+              <requestFocusEnabled value="false"/>
+              <text value=""/>
+            </properties>
+          </component>
+          <component id="8207e" class="javax.swing.JLabel">
+            <constraints>
+              <grid row="5" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+            </constraints>
+            <properties>
+              <requestFocusEnabled value="false"/>
+              <text resource-bundle="messages" key="PictureInfoViewer_PictureResolutionLabel"/>
+            </properties>
+          </component>
+          <component id="60553" class="javax.swing.JLabel" binding="PictureResolutionInfoLabel">
+            <constraints>
+              <grid row="5" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+            </constraints>
+            <properties>
+              <requestFocusEnabled value="false"/>
+              <text value=""/>
+            </properties>
+          </component>
+          <component id="5571d" class="javax.swing.JLabel">
+            <constraints>
+              <grid row="6" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+            </constraints>
+            <properties>
+              <font size="12"/>
+              <requestFocusEnabled value="false"/>
+              <text resource-bundle="messages" key="PictureInfoViewer_PictureDPILabel"/>
+            </properties>
+          </component>
+          <component id="7c236" class="javax.swing.JLabel">
+            <constraints>
+              <grid row="7" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+            </constraints>
+            <properties>
+              <requestFocusEnabled value="false"/>
+              <text resource-bundle="messages" key="PictureInfoViewer_PictureBitDepth"/>
+            </properties>
+          </component>
+          <component id="3a772" class="javax.swing.JLabel" binding="PictureDPIInfoLabel">
+            <constraints>
+              <grid row="6" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+            </constraints>
+            <properties>
+              <requestFocusEnabled value="false"/>
+              <text value=""/>
+            </properties>
+          </component>
+          <component id="16d8d" class="javax.swing.JLabel" binding="PictureBitDepthInfoLabel">
+            <constraints>
+              <grid row="7" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+            </constraints>
+            <properties>
+              <requestFocusEnabled value="false"/>
+              <text value=""/>
+            </properties>
+          </component>
+          <component id="90456" class="javax.swing.JLabel">
+            <constraints>
+              <grid row="2" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+            </constraints>
+            <properties>
+              <requestFocusEnabled value="false"/>
+              <text resource-bundle="messages" key="PictureInfoViewer_PicturePathLabel"/>
+            </properties>
+          </component>
+          <component id="ca761" class="javax.swing.JLabel" binding="PicturePathInfoLabel">
+            <constraints>
+              <grid row="2" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+            </constraints>
+            <properties>
+              <requestFocusEnabled value="false"/>
+              <text value=""/>
+            </properties>
+          </component>
+        </children>
+      </grid>
+    </children>
+  </scrollpane>
+</form>

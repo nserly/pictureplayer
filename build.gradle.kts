@@ -28,24 +28,9 @@ sourceSets {
 
 
 dependencies {
-    api(libs.com.formdev.flatlaf);
-    api(libs.com.formdev.flatlaf.extras);
-    api(libs.com.google.code.gson.gson)
-    api(libs.com.github.oshi.oshi.core)
-    api(libs.com.twelvemonkeys.imageio.imageio.core)
-    api(libs.com.twelvemonkeys.imageio.imageio.jpeg)
-    api(libs.com.twelvemonkeys.imageio.imageio.tiff)
-    api(libs.com.twelvemonkeys.imageio.imageio.webp)
-    api(libs.net.coobird.thumbnailator)
-    api(libs.net.java.dev.jna)
-    api(libs.net.java.dev.jna.platform)
-    api(libs.com.github.adedayo.intellij.sdk.forms.rt)
-    api(libs.org.apache.logging.log4j.log4j.api)
-    api(libs.org.apache.logging.log4j.log4j.core)
-    api(libs.org.apache.logging.log4j.log4j.slf4j2.impl)
-    api(libs.org.slf4j.slf4j.api)
-    compileOnly(libs.org.projectlombok.lombok)
-    annotationProcessor(libs.org.projectlombok.lombok)
+    api(libs.bundles.depApi)
+    compileOnly(libs.bundles.depCompileOnly)
+    annotationProcessor(libs.bundles.depAnnotationProcessor)
 }
 
 group = "top.nserly"
@@ -59,10 +44,10 @@ publishing {
     }
 }
 
-tasks.withType<JavaCompile>() {
+tasks.withType<JavaCompile> {
     options.encoding = "UTF-8"
 }
 
-tasks.withType<Javadoc>() {
+tasks.withType<Javadoc> {
     options.encoding = "UTF-8"
 }

@@ -36,6 +36,11 @@ public class SystemNotifications {
 
     public static SystemTray getSystemTray(TrayIcon trayIcon, MenuItem[] menuItems, SystemTrayEvent systemTrayEvent) {
         if (!isSupportedSystemNotifications) throw new RuntimeException("System Notifications is not supported!");
+        String osName = System.getProperty("os.name").toLowerCase();
+        if (osName.contains("nix") || osName.contains("nux") || osName.contains("aix")) {
+            log.warn("System tray is not supported!Because your system is Linux or Unix-like system.Because they don't offer this type of support by default!");
+            return null;
+        }
         // 获取系统托盘实例
         SystemTray tray = SystemTray.getSystemTray();
 

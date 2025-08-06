@@ -2,7 +2,7 @@ package top.nserly.PicturePlayer.Utils.ImageManager.Blur;
 
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import top.nserly.PicturePlayer.NComponent.Compoent.PaintPicturePanel;
+import top.nserly.PicturePlayer.NComponent.Component.PaintPicturePanel;
 import top.nserly.PicturePlayer.Utils.ImageManager.Info.GetImageInformation;
 
 import java.awt.image.BufferedImage;

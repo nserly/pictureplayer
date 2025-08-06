@@ -1,7 +1,7 @@
 package top.nserly.PicturePlayer.NComponent.Frame;
 
 import top.nserly.GUIStarter;
-import top.nserly.PicturePlayer.NComponent.Compoent.PaintPicturePanel;
+import top.nserly.PicturePlayer.NComponent.Component.PaintPicturePanel;
 import top.nserly.PicturePlayer.Size.SizeOperate;
 
 import javax.swing.*;

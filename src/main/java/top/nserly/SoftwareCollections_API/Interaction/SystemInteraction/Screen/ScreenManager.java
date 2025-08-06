@@ -3,6 +3,7 @@ package top.nserly.SoftwareCollections_API.Interaction.SystemInteraction.Screen;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import top.nserly.SoftwareCollections_API.Handler.Exception.ExceptionHandler;
+import top.nserly.SoftwareCollections_API.Interaction.SystemInteraction.Screen.Linux.LinuxScreenProvider;
 import top.nserly.SoftwareCollections_API.Interaction.SystemInteraction.Screen.Windows.WindowsScreenProvider;
 
 import java.awt.*;
@@ -30,9 +31,9 @@ public class ScreenManager {
         if (osName.contains("win")) {
             screenProvider = new WindowsScreenProvider();
         }
-//        else if (osName.contains("nix") || osName.contains("nux") || osName.contains("aix")) {
-//
-//        }
+        else if (osName.contains("nix") || osName.contains("nux") || osName.contains("aix")) {
+            screenProvider = new LinuxScreenProvider();
+        }
         else {
             throw new UnsupportedOperationException("Unsupported operating system: " + osName);
         }

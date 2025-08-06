@@ -2,7 +2,7 @@ package top.nserly.PicturePlayer.Size;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import top.nserly.PicturePlayer.NComponent.Compoent.PaintPicturePanel;
+import top.nserly.PicturePlayer.NComponent.Component.PaintPicturePanel;
 import top.nserly.SoftwareCollections_API.Interaction.SystemInteraction.Screen.ScreenManager;
 
 import java.awt.*;
@@ -130,7 +130,7 @@ public class SizeOperate {
     //获取图片最佳比例
     public double getPictureOptimalSize() {
         if (Component == null || Component.width == 0 || Component.height == 0) {
-            logger.error("Could not get window optimal size");
+            logger.warn("Could not get window optimal size");
             return Default;
         }
         int PictureWidth = imageCanvas.getImageWidth();

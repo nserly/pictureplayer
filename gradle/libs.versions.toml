@@ -32,3 +32,26 @@ org-apache-logging-log4j-log4j-core = { module = "org.apache.logging.log4j:log4j
 org-apache-logging-log4j-log4j-slf4j2-impl = { module = "org.apache.logging.log4j:log4j-slf4j2-impl", version.ref = "org-apache-logging-log4j-log4j" }
 org-projectlombok-lombok = { module = "org.projectlombok:lombok", version.ref = "org-projectlombok-lombok" }
 org-slf4j-slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "org-slf4j-slf4j-api" }
+
+
+[bundles]
+depApi = [
+    "com.formdev.flatlaf",
+    "com.formdev.flatlaf.extras",
+    "com.google.code.gson.gson",
+    "com.github.oshi.oshi.core",
+    "com.twelvemonkeys.imageio.imageio.core",
+    "com.twelvemonkeys.imageio.imageio.jpeg",
+    "com.twelvemonkeys.imageio.imageio.tiff",
+    "com.twelvemonkeys.imageio.imageio.webp",
+    "net.coobird.thumbnailator",
+    "net.java.dev.jna",
+    "net.java.dev.jna.platform",
+    "com.github.adedayo.intellij.sdk.forms.rt",
+    "org.apache.logging.log4j.log4j.api",
+    "org.apache.logging.log4j.log4j.core",
+    "org.apache.logging.log4j.log4j.slf4j2.impl",
+    "org.slf4j.slf4j.api"
+]
+depCompileOnly = ["org.projectlombok.lombok"]
+depAnnotationProcessor = ["org.projectlombok.lombok"]

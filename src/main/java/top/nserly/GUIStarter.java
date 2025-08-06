@@ -7,8 +7,8 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import top.nserly.PicturePlayer.Loading.Bundle;
 import top.nserly.PicturePlayer.Loading.Init;
-import top.nserly.PicturePlayer.NComponent.Compoent.PaintPicturePanel;
-import top.nserly.PicturePlayer.NComponent.Compoent.ThumbnailPreviewOfImage;
+import top.nserly.PicturePlayer.NComponent.Component.PaintPicturePanel;
+import top.nserly.PicturePlayer.NComponent.Component.ThumbnailPreviewOfImage;
 import top.nserly.PicturePlayer.NComponent.Frame.ConfirmUpdateDialog;
 import top.nserly.PicturePlayer.NComponent.Frame.ExitControlDialog;
 import top.nserly.PicturePlayer.NComponent.Frame.OpenImageChooser;
@@ -147,85 +147,10 @@ public class GUIStarter extends JFrame {
 
     public static final Image SOFTWARE_FRAME_ICON = SystemNotifications.DefaultIcon.getImage();
 
-    static {
-        ExceptionHandler.setUncaughtExceptionHandler(log);
-        //初始化Init
-        init = new Init<>();
-        init.setUpdate(true);
-        log.info("The software starts running...");
-        System.setProperty("sun.java2d.opengl", "true");
-        System.setProperty("flatlaf.uiScale", "auto"); // FlatLaf 自动处理缩放
-        System.setProperty("file.encoding", "UTF-8");
-        System.setProperty("SoftwareName", "PicturePlayer");
-        log.info("SoftwareName:{}", System.getProperty("SoftwareName"));
-    }
-
     @Getter
     private final TreeMap<String, ThumbnailPreviewOfImage> thumbnailPreviewOfImages = new TreeMap<>();
 
-    private static Method $$$cachedGetBundleMethod$$$ = null;
-
-    public static void main(String[] args) throws InterruptedException {
-        Thread pictureFileThread = null;
-        AtomicReference<String> openingFilePath = new AtomicReference<>();
-        if (args.length > 0) {
-            pictureFileThread = new Thread(() -> {
-                for (String arg : args) {
-                    if (GetImageInformation.isImageFile(new File(arg))) {
-                        openingFilePath.set(arg);
-                        return;
-                    }
-                }
-            });
-            pictureFileThread.start();
-        }
-
-        windowsAppMutex = new WindowsAppMutex(22357);
-        boolean isNUpdate = "true".equals(System.getProperty("NUpdate"));
-        log.info("NUpdate:{}", isNUpdate);
-        // 尝试读取是否为第一个实例
-        if ((!windowsAppMutex.isFirstInstance()) && (!isNUpdate)) {
-            windowsAppMutex.sendSoftwareVisibleDirectiveToExistingInstance(true);
-            // 发送参数到已有实例
-            if (pictureFileThread != null) {
-                try {
-                    pictureFileThread.join();
-                    if (openingFilePath.get() != null && !openingFilePath.get().isBlank()) {
-                        windowsAppMutex.sendFilePathToExistingInstance(openingFilePath.get());
-                    }
-                } catch (Exception e) {
-                    log.error(ExceptionHandler.getExceptionMessage(e));
-                }
-            }
-            exitAndRecord();
-        }
-
-        initSystemTrayMenuItems();
-        String classPath = System.getProperty("java.class.path");
-        if (classPath == null || classPath.isBlank()) {
-            System.setProperty("java.home", ".");
-        }
-        init.run();
-        UIManager.getUIManager().setTheme(SettingsInfoHandle.getInt("ThemeMode", init.getProperties()));
-        UIManager.getUIManager().applyThemeOnSetAndRefreshWindows();
-        main = new GUIStarter("Picture Player(Version:" + PicturePlayerVersion.getVersion() + ")");
-        windowsAppMutex.addHandleSoftwareRequestAction(new HandleSoftwareRequestAction() {
-            @Override
-            public void setVisible(boolean visible) {
-                main.setVisible(visible);
-            }
-
-            @Override
-            public void receiveFile(String filePath) {
-                main.openPicture(filePath);
-            }
-        });
-        if (openingFilePath.get() != null && !openingFilePath.get().isBlank()) {
-            main.openPicture(openingFilePath.get());
-        }
-        initSystemTray();
-        extractedSystemInfoToLog();
-    }    private final DropTargetAdapter dropTargetAdapter = new DropTargetAdapter() {
+    private final DropTargetAdapter dropTargetAdapter = new DropTargetAdapter() {
         public void drop(DropTargetDropEvent dtde) {
             try {
                 dtde.acceptDrop(DnDConstants.ACTION_COPY);
@@ -250,6 +175,21 @@ public class GUIStarter extends JFrame {
     };
 
     private JComboBox<String> CloseMainFrameControlComboBox;
+
+    private static Method $$$cachedGetBundleMethod$$$ = null;
+
+    static {
+        ExceptionHandler.setUncaughtExceptionHandler(log);
+        //初始化Init
+        init = new Init<>();
+        init.setUpdate(true);
+        log.info("The software starts running...");
+        System.setProperty("sun.java2d.opengl", "true");
+        System.setProperty("flatlaf.uiScale", "auto"); // FlatLaf 自动处理缩放
+        System.setProperty("file.encoding", "UTF-8");
+        System.setProperty("SoftwareName", "PicturePlayer");
+        log.info("SoftwareName:{}", System.getProperty("SoftwareName"));
+    }
 
     public static void exitAndRecord() {
         new Thread(() -> windowsAppMutex.close()).start();
@@ -1176,7 +1116,67 @@ public class GUIStarter extends JFrame {
         return fontWithFallback instanceof FontUIResource ? fontWithFallback : new FontUIResource(fontWithFallback);
     }
 
+    public static void main(String[] args) throws InterruptedException {
+        Thread pictureFileThread = null;
+        AtomicReference<String> openingFilePath = new AtomicReference<>();
+        if (args.length > 0) {
+            pictureFileThread = new Thread(() -> {
+                for (String arg : args) {
+                    if (GetImageInformation.isImageFile(new File(arg))) {
+                        openingFilePath.set(arg);
+                        return;
+                    }
+                }
+            });
+            pictureFileThread.start();
+        }
 
+        windowsAppMutex = new WindowsAppMutex(22357);
+        boolean isNUpdate = "true".equals(System.getProperty("NUpdate"));
+        log.info("NUpdate:{}", isNUpdate);
+        // 尝试读取是否为第一个实例
+        if ((!windowsAppMutex.isFirstInstance()) && (!isNUpdate)) {
+            windowsAppMutex.sendSoftwareVisibleDirectiveToExistingInstance(true);
+            // 发送参数到已有实例
+            if (pictureFileThread != null) {
+                try {
+                    pictureFileThread.join();
+                    if (openingFilePath.get() != null && !openingFilePath.get().isBlank()) {
+                        windowsAppMutex.sendFilePathToExistingInstance(openingFilePath.get());
+                    }
+                } catch (Exception e) {
+                    log.error(ExceptionHandler.getExceptionMessage(e));
+                }
+            }
+            exitAndRecord();
+        }
+
+        initSystemTrayMenuItems();
+        String classPath = System.getProperty("java.class.path");
+        if (classPath == null || classPath.isBlank()) {
+            System.setProperty("java.home", ".");
+        }
+        init.run();
+        UIManager.getUIManager().setTheme(SettingsInfoHandle.getInt("ThemeMode", init.getProperties()));
+        UIManager.getUIManager().applyThemeOnSetAndRefreshWindows();
+        main = new GUIStarter("Picture Player(Version:" + PicturePlayerVersion.getVersion() + ")");
+        windowsAppMutex.addHandleSoftwareRequestAction(new HandleSoftwareRequestAction() {
+            @Override
+            public void setVisible(boolean visible) {
+                main.setVisible(visible);
+            }
+
+            @Override
+            public void receiveFile(String filePath) {
+                main.openPicture(filePath);
+            }
+        });
+        if (openingFilePath.get() != null && !openingFilePath.get().isBlank()) {
+            main.openPicture(openingFilePath.get());
+        }
+        extractedSystemInfoToLog();
+        initSystemTray();
+    }
 
     private String $$$getMessageFromBundle$$$(String path, String key) {
         ResourceBundle bundle;

@@ -81,7 +81,7 @@ public class GetImageInformation {
         }
 
         String fileName = file.getName().toLowerCase();
-        return SupportPictureExtension.contains(fileName.substring(fileName.lastIndexOf(".")));
+        return fileName.contains(".") && SupportPictureExtension.contains(fileName.substring(fileName.lastIndexOf(".")));
     }
 
     //算法实现：将byte数组转化为十六进制字符串
@@ -362,7 +362,9 @@ public class GetImageInformation {
     //获取当前图片路径下所有图片
     public static ArrayList<String> getCurrentPathOfPicture(String path) {
         ArrayList<String> arrayList = new ArrayList<>();
-        for (File file : Objects.requireNonNull(new File(path).getParentFile().listFiles())) {
+        File pictureOrDir = new File(path);
+        File parentDir = pictureOrDir.isFile() ? pictureOrDir.getParentFile() : pictureOrDir;
+        for (File file : Objects.requireNonNull(parentDir.listFiles())) {
             if (GetImageInformation.isImageFile(file)) arrayList.add(file.getPath());
         }
         return arrayList;

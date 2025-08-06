@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<form xmlns="http://www.intellij.com/uidesigner/form/" version="1" bind-to-class="top.nserly.PicturePlayer.NComponent.Component.PaintPicturePanel">
+  <grid id="27dc6" binding="MainPanel" layout-manager="BorderLayout" hgap="0" vgap="0">
+    <constraints>
+      <xy x="20" y="20" width="722" height="418"/>
+    </constraints>
+    <properties>
+      <requestFocusEnabled value="false"/>
+    </properties>
+    <border type="none"/>
+    <children>
+      <grid id="eb998" binding="AboveMainPanel" layout-manager="FlowLayout" hgap="5" vgap="5" flow-align="1">
+        <constraints border-constraint="North"/>
+        <properties>
+          <requestFocusEnabled value="false"/>
+        </properties>
+        <border type="none"/>
+        <children>
+          <component id="746f6" class="javax.swing.JButton" binding="counterclockwise">
+            <constraints/>
+            <properties>
+              <requestFocusEnabled value="false"/>
+              <text resource-bundle="messages" key="Display_RotateCounterclockwise"/>
+            </properties>
+          </component>
+          <component id="26d97" class="javax.swing.JButton" binding="Reset">
+            <constraints/>
+            <properties>
+              <requestFocusEnabled value="false"/>
+              <text resource-bundle="messages" key="Display_reset"/>
+            </properties>
+          </component>
+          <component id="6cb9d" class="javax.swing.JButton" binding="FullScreen">
+            <constraints/>
+            <properties>
+              <requestFocusEnabled value="false"/>
+              <text resource-bundle="messages" key="Display_FullScreenButton"/>
+            </properties>
+          </component>
+          <component id="7ec55" class="javax.swing.JButton" binding="clockwise">
+            <constraints/>
+            <properties>
+              <requestFocusEnabled value="false"/>
+              <text resource-bundle="messages" key="Display_RotateClockwiseButton"/>
+            </properties>
+          </component>
+          <component id="9df55" class="top.nserly.PicturePlayer.NComponent.Component.PercentLabel" binding="percentLabel">
+            <constraints/>
+            <properties>
+              <text value="0%"/>
+            </properties>
+          </component>
+        </children>
+      </grid>
+      <grid id="3845f" binding="BelowMainPanel" layout-manager="BorderLayout" hgap="1" vgap="2">
+        <constraints border-constraint="South"/>
+        <properties>
+          <requestFocusEnabled value="false"/>
+        </properties>
+        <border type="none"/>
+        <children>
+          <grid id="473ef" binding="SouthLeftPanel" layout-manager="FlowLayout" hgap="5" vgap="5" flow-align="3">
+            <constraints border-constraint="West"/>
+            <properties>
+              <requestFocusEnabled value="false"/>
+            </properties>
+            <border type="none"/>
+            <children>
+              <component id="38570" class="javax.swing.JLabel" binding="PictureResolution">
+                <constraints/>
+                <properties>
+                  <font size="15"/>
+                  <requestFocusEnabled value="false"/>
+                  <text value=""/>
+                </properties>
+              </component>
+              <component id="97b82" class="javax.swing.JLabel" binding="PictureSize">
+                <constraints/>
+                <properties>
+                  <font size="15"/>
+                  <requestFocusEnabled value="false"/>
+                  <text value=""/>
+                </properties>
+              </component>
+              <component id="747ca" class="javax.swing.JButton" binding="MorePictureInfoButton">
+                <constraints/>
+                <properties>
+                  <text resource-bundle="messages" key="PictureViewer_MorePictureInfoButton"/>
+                </properties>
+              </component>
+            </children>
+          </grid>
+          <grid id="d57ef" binding="SouthRightPanel" layout-manager="FlowLayout" hgap="5" vgap="5" flow-align="2">
+            <constraints border-constraint="East"/>
+            <properties>
+              <requestFocusEnabled value="false"/>
+            </properties>
+            <border type="none"/>
+            <children>
+              <component id="6a1e6" class="javax.swing.JButton" binding="reduceButton">
+                <constraints/>
+                <properties>
+                  <requestFocusEnabled value="false"/>
+                  <text resource-bundle="messages" key="Display_reduce"/>
+                </properties>
+              </component>
+              <component id="1f4ad" class="javax.swing.JSlider" binding="PercentSlider">
+                <constraints/>
+                <properties>
+                  <requestFocusEnabled value="false"/>
+                </properties>
+              </component>
+              <component id="f7c16" class="javax.swing.JButton" binding="enlargeButton">
+                <constraints/>
+                <properties>
+                  <requestFocusEnabled value="false"/>
+                  <text resource-bundle="messages" key="Display_enlarge"/>
+                </properties>
+              </component>
+            </children>
+          </grid>
+        </children>
+      </grid>
+    </children>
+  </grid>
+</form>
