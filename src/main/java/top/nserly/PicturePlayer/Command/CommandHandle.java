@@ -121,28 +121,43 @@ public class CommandHandle {
         createAndRunWindowsBatchFile(DownloadFilePath, null);
     }
 
-    public static void createAndRunWindowsBatchFile(String DownloadFilePath, String OpenedPicturePath) throws IOException {
-        String batchContent = "@echo off\n" +
-                "timeout /t 3\n"
-                + "del \".\\" + CURRENT_JAR_NAME + "\"\n"
-                + "ren \"" + DownloadFilePath.substring(DownloadFilePath.lastIndexOf("/") + 1) + MainFileSuffix + "\" \"" + CURRENT_JAR_NAME + "\"\n" +
-                "cls\n"
-                + "\"" + System.getProperty("sun.boot.library.path") + "\\java.exe\" -Dsun.java2d.opengl=true -DNUpdate=true -cp \"" + CURRENT_JAR_NAME + ";lib\\*\" top.nserly.GUIStarter ";
-        if (OpenedPicturePath != null && !OpenedPicturePath.isBlank()) {
-            batchContent = batchContent + "\"" + OpenedPicturePath + "\"";
+    public static void createAndRunWindowsBatchFile(String downloadFilePath, String openedPicturePath) throws IOException {
+        // 用File类可靠提取文件名（自动处理Windows/Linux分隔符）
+        String fileName = new File(downloadFilePath).getName();
+
+        // 构建批处理内容（修复路径、命令参数）
+        String batchContent = "@echo off\n"
+                + "timeout /t 3 /nobreak >nul 2>&1\n"  // 禁止用户中断，隐藏输出
+                + "if exist \".\\" + CURRENT_JAR_NAME + "\" (\n"  // 检查旧文件是否存在
+                + "  del /f /q \".\\" + CURRENT_JAR_NAME + "\"\n"  // 强制删除
+                + ")\n"
+                + "ren \"" + fileName + MainFileSuffix + "\" \"" + CURRENT_JAR_NAME + "\"\n"
+                + "cls\n"
+                // 使用java.home获取可靠的Java路径
+                + "\"" + System.getProperty("java.home") + "\\bin\\java.exe\" "
+                + "-Dsun.java2d.opengl=true -DNUpdate=true "
+                + "-cp \"" + CURRENT_JAR_NAME + ";lib\\*\" top.nserly.GUIStarter ";
+
+        if (openedPicturePath != null && !openedPicturePath.isBlank()) {
+            batchContent += "\"" + openedPicturePath + "\"";  // 带空格参数需引号
         }
 
+        // Windows批处理默认编码为GBK（中文系统）
         Charset ansiCharset = Charset.forName("GBK");
 
-        Path batchPath = Path.of(CURRENT_JAR_PARENT_PATH + "/replace.bat");
+        // 用File.separator统一路径分隔符
+        Path batchPath = Path.of(CURRENT_JAR_PARENT_PATH + File.separator + "replace.bat");
         Files.writeString(batchPath, batchContent, ansiCharset);
 
         log.info("The script file is created!");
         log.info("Start running the script file and end the current software...");
 
-        Runtime.getRuntime().exec(new String[]{"cmd", "/c", "start", CURRENT_JAR_PARENT_PATH + "/replace.bat"});
-        log.info("Program Termination!");
+        // 执行批处理时，路径带空格需用引号包裹
+        String batchFullPath = batchPath.toString();
+        Runtime.getRuntime().exec(new String[]{"cmd", "/c", "start", "\"\"", batchFullPath});
+        // 注意："start"命令后加"\"\""是为了避免将路径当作窗口标题
 
+        log.info("Program Termination!");
         GUIStarter.exitAndRecord();
     }
 
@@ -150,21 +165,28 @@ public class CommandHandle {
         createAndRunLinuxShellScript(DownloadFilePath, null);
     }
 
-    public static void createAndRunLinuxShellScript(String DownloadFilePath, String OpenedPicturePath) throws IOException {
+    public static void createAndRunLinuxShellScript(String downloadFilePath, String openedPicturePath) throws IOException {
+        // 提取下载文件的文件名（处理路径分隔符）
+        String fileName = new File(downloadFilePath).getName();
+
         String shellContent =
                 "sleep 1\n"
                         + "rm " + CURRENT_JAR_NAME + "\n"
-                        + "mv " + DownloadFilePath.substring(DownloadFilePath.lastIndexOf("/") + 1) + MainFileSuffix + " " + CURRENT_JAR_NAME + "\n"
-                        + "\"" + System.getProperty("sun.boot.library.path") + "\\java.exe\" -Dsun.java2d.opengl=true -DNUpdate=true -cp \"" + CURRENT_JAR_NAME + ";lib\\*\" top.nserly.GUIStarter ";
-        if (OpenedPicturePath != null && !OpenedPicturePath.isBlank()) {
-            shellContent = shellContent + OpenedPicturePath;
+                        + "mv " + fileName + MainFileSuffix + " " + CURRENT_JAR_NAME + "\n"
+                        + "java -Dsun.java2d.opengl=true -DNUpdate=true -cp " + CURRENT_JAR_NAME + ":lib/* top.nserly.GUIStarter ";
+
+        if (openedPicturePath != null && !openedPicturePath.isBlank()) {
+            shellContent += openedPicturePath;
         }
+
         Path shellPath = Path.of("./replace.sh");
-        Files.write(shellPath, shellContent.getBytes());
+        Files.writeString(shellPath, shellContent);
         Files.setPosixFilePermissions(shellPath, PosixFilePermissions.fromString("rwx------"));
+
         log.info("The script file is created");
         log.info("Start running the script file and end the current software...");
-        Runtime.getRuntime().exec(new String[]{"sh", "-c", "nohup sh ./replace.sh &"});
+        // 执行脚本（nohup输出重定向到/dev/null避免生成nohup.out）
+        Runtime.getRuntime().exec(new String[]{"sh", "-c", "nohup sh ./replace.sh >/dev/null 2>&1 &"});
         log.info("Program Termination!");
         GUIStarter.exitAndRecord();
     }

@@ -176,8 +176,6 @@ public class GUIStarter extends JFrame {
 
     private JComboBox<String> CloseMainFrameControlComboBox;
 
-    private static Method $$$cachedGetBundleMethod$$$ = null;
-
     static {
         ExceptionHandler.setUncaughtExceptionHandler(log);
         //初始化Init
@@ -189,17 +187,6 @@ public class GUIStarter extends JFrame {
         System.setProperty("file.encoding", "UTF-8");
         System.setProperty("SoftwareName", "PicturePlayer");
         log.info("SoftwareName:{}", System.getProperty("SoftwareName"));
-    }
-
-    public static void exitAndRecord() {
-        new Thread(() -> windowsAppMutex.close()).start();
-        closeInformation();
-        if (GUIStarter.systemTray != null) {
-            GUIStarter.systemTray.remove(SystemNotifications.DefaultIcon);
-            GUIStarter.systemTray = null;
-        }
-        log.info("Program Termination!");
-        System.exit(0);
     }
 
     //更新界面
@@ -381,63 +368,15 @@ public class GUIStarter extends JFrame {
         System.gc();
     }
 
-    //关闭
-    public static void close() {
-        if (GUIStarter.main.getTitle().contains("*")) {
-            int choose = JOptionPane.showConfirmDialog(GUIStarter.main, Bundle.getMessage("WindowCloseWithSettingsNotSave_Content"), Bundle.getMessage("WindowCloseWithSettingsNotSave_Title"), JOptionPane.YES_NO_CANCEL_OPTION);
-            if (choose == JOptionPane.YES_OPTION) {
-                log.info("Saving Settings...");
-                GUIStarter.main.centre.save();
-                GUIStarter.main.settingRevised(false);
-            } else if (choose == JOptionPane.NO_OPTION) {
-                exitAndRecord();
-            } else {
-                return;
-            }
+    public static void exitAndRecord() {
+        windowsAppMutex.close();
+        closeInformation();
+        if (GUIStarter.systemTray != null) {
+            GUIStarter.systemTray.remove(SystemNotifications.DefaultIcon);
+            GUIStarter.systemTray = null;
         }
-
-        switch (SettingsInfoHandle.getInt("CloseMainFrameControl", init.getProperties())) {
-            //直接退出
-            case 1 -> {
-                exitAndRecord();
-                return;
-            }
-            //最小化到系统托盘
-            case 2 -> {
-                log.info("Minimized to the system tray");
-                gotoSystemTrayAndDisposeMainFrame();
-                return;
-            }
-        }
-
-        //设置消息对话框面板
-        var exitControlDialog = new ExitControlDialog(main, true);
-        exitControlDialog.setExitControlButtonChoiceListener(((choice, doNotAppear) -> {
-            if (choice == ExitControlButtonChoiceListener.EXIT_CANCEL) return;
-            switch (choice) {
-                case ExitControlButtonChoiceListener.EXIT_DIRECTLY -> {
-                    if (doNotAppear) {
-                        GUIStarter.main.centre.CurrentData.replace("CloseMainFrameControl", "1");
-                        GUIStarter.main.centre.save();
-                        GUIStarter.main.CloseMainFrameControlComboBox.setSelectedIndex(1);
-                        GUIStarter.main.settingRevised(false);
-                    }
-                    exitAndRecord();
-                }
-                case ExitControlButtonChoiceListener.EXIT_TO_SYSTEM_TRAY -> {
-                    if (doNotAppear) {
-                        GUIStarter.main.centre.CurrentData.replace("CloseMainFrameControl", "2");
-                        GUIStarter.main.centre.save();
-                        GUIStarter.main.CloseMainFrameControlComboBox.setSelectedIndex(2);
-                        GUIStarter.main.settingRevised(false);
-                    }
-                    log.info("Minimized to the system tray");
-                    gotoSystemTrayAndDisposeMainFrame();
-                }
-            }
-
-        }));
-        exitControlDialog.setVisible(true);
+        log.info("Program Termination!");
+        System.exit(0);
     }
 
 
@@ -1116,67 +1055,7 @@ public class GUIStarter extends JFrame {
         return fontWithFallback instanceof FontUIResource ? fontWithFallback : new FontUIResource(fontWithFallback);
     }
 
-    public static void main(String[] args) throws InterruptedException {
-        Thread pictureFileThread = null;
-        AtomicReference<String> openingFilePath = new AtomicReference<>();
-        if (args.length > 0) {
-            pictureFileThread = new Thread(() -> {
-                for (String arg : args) {
-                    if (GetImageInformation.isImageFile(new File(arg))) {
-                        openingFilePath.set(arg);
-                        return;
-                    }
-                }
-            });
-            pictureFileThread.start();
-        }
-
-        windowsAppMutex = new WindowsAppMutex(22357);
-        boolean isNUpdate = "true".equals(System.getProperty("NUpdate"));
-        log.info("NUpdate:{}", isNUpdate);
-        // 尝试读取是否为第一个实例
-        if ((!windowsAppMutex.isFirstInstance()) && (!isNUpdate)) {
-            windowsAppMutex.sendSoftwareVisibleDirectiveToExistingInstance(true);
-            // 发送参数到已有实例
-            if (pictureFileThread != null) {
-                try {
-                    pictureFileThread.join();
-                    if (openingFilePath.get() != null && !openingFilePath.get().isBlank()) {
-                        windowsAppMutex.sendFilePathToExistingInstance(openingFilePath.get());
-                    }
-                } catch (Exception e) {
-                    log.error(ExceptionHandler.getExceptionMessage(e));
-                }
-            }
-            exitAndRecord();
-        }
-
-        initSystemTrayMenuItems();
-        String classPath = System.getProperty("java.class.path");
-        if (classPath == null || classPath.isBlank()) {
-            System.setProperty("java.home", ".");
-        }
-        init.run();
-        UIManager.getUIManager().setTheme(SettingsInfoHandle.getInt("ThemeMode", init.getProperties()));
-        UIManager.getUIManager().applyThemeOnSetAndRefreshWindows();
-        main = new GUIStarter("Picture Player(Version:" + PicturePlayerVersion.getVersion() + ")");
-        windowsAppMutex.addHandleSoftwareRequestAction(new HandleSoftwareRequestAction() {
-            @Override
-            public void setVisible(boolean visible) {
-                main.setVisible(visible);
-            }
-
-            @Override
-            public void receiveFile(String filePath) {
-                main.openPicture(filePath);
-            }
-        });
-        if (openingFilePath.get() != null && !openingFilePath.get().isBlank()) {
-            main.openPicture(openingFilePath.get());
-        }
-        extractedSystemInfoToLog();
-        initSystemTray();
-    }
+    private static Method $$$cachedGetBundleMethod$$$ = null;
 
     private String $$$getMessageFromBundle$$$(String path, String key) {
         ResourceBundle bundle;
@@ -1252,6 +1131,131 @@ public class GUIStarter extends JFrame {
      */
     public JComponent $$$getRootComponent$$$() {
         return panel1;
+    }
+
+    //关闭
+    public static void close() {
+        if (GUIStarter.main.getTitle().contains("*")) {
+            int choose = JOptionPane.showConfirmDialog(GUIStarter.main, Bundle.getMessage("WindowCloseWithSettingsNotSave_Content"), Bundle.getMessage("WindowCloseWithSettingsNotSave_Title"), JOptionPane.YES_NO_CANCEL_OPTION);
+            if (choose == JOptionPane.YES_OPTION) {
+                log.info("Saving Settings...");
+                GUIStarter.main.centre.save();
+                GUIStarter.main.settingRevised(false);
+            } else if (choose == JOptionPane.NO_OPTION) {
+                exitAndRecord();
+            } else {
+                return;
+            }
+        }
+
+        if (SystemNotifications.createdSystemTrayCount == 0) {
+            log.warn("System Tray is not supported! Program will exit directly when you close the main window!");
+            exitAndRecord();
+        }
+        switch (SettingsInfoHandle.getInt("CloseMainFrameControl", init.getProperties())) {
+            //直接退出
+            case 1 -> {
+                exitAndRecord();
+                return;
+            }
+            //最小化到系统托盘
+            case 2 -> {
+                log.info("Minimized to the system tray");
+                gotoSystemTrayAndDisposeMainFrame();
+                return;
+            }
+        }
+
+        //设置消息对话框面板
+        var exitControlDialog = new ExitControlDialog(main, true);
+        exitControlDialog.setExitControlButtonChoiceListener(((choice, doNotAppear) -> {
+            if (choice == ExitControlButtonChoiceListener.EXIT_CANCEL) return;
+            switch (choice) {
+                case ExitControlButtonChoiceListener.EXIT_DIRECTLY -> {
+                    if (doNotAppear) {
+                        GUIStarter.main.centre.CurrentData.replace("CloseMainFrameControl", "1");
+                        GUIStarter.main.centre.save();
+                        GUIStarter.main.CloseMainFrameControlComboBox.setSelectedIndex(1);
+                        GUIStarter.main.settingRevised(false);
+                    }
+                    exitAndRecord();
+                }
+                case ExitControlButtonChoiceListener.EXIT_TO_SYSTEM_TRAY -> {
+                    if (doNotAppear) {
+                        GUIStarter.main.centre.CurrentData.replace("CloseMainFrameControl", "2");
+                        GUIStarter.main.centre.save();
+                        GUIStarter.main.CloseMainFrameControlComboBox.setSelectedIndex(2);
+                        GUIStarter.main.settingRevised(false);
+                    }
+                    log.info("Minimized to the system tray");
+                    gotoSystemTrayAndDisposeMainFrame();
+                }
+            }
+
+        }));
+        exitControlDialog.setVisible(true);
+    }
+
+    public static void main(String[] args) throws InterruptedException {
+        Thread pictureFileThread = null;
+        AtomicReference<String> openingFilePath = new AtomicReference<>();
+        if (args.length > 0) {
+            pictureFileThread = new Thread(() -> {
+                for (String arg : args) {
+                    if (GetImageInformation.isImageFile(new File(arg))) {
+                        openingFilePath.set(arg);
+                        return;
+                    }
+                }
+            });
+            pictureFileThread.start();
+        }
+
+        windowsAppMutex = new WindowsAppMutex(22357);
+        boolean isNUpdate = "true".equals(System.getProperty("NUpdate"));
+        log.info("NUpdate:{}", isNUpdate);
+        // 尝试读取是否为第一个实例
+        if ((!windowsAppMutex.isFirstInstance()) && (!isNUpdate)) {
+            windowsAppMutex.sendSoftwareVisibleDirectiveToExistingInstance(true);
+            // 发送参数到已有实例
+            if (pictureFileThread != null) {
+                try {
+                    pictureFileThread.join();
+                    if (openingFilePath.get() != null && !openingFilePath.get().isBlank()) {
+                        windowsAppMutex.sendFilePathToExistingInstance(openingFilePath.get());
+                    }
+                } catch (Exception e) {
+                    log.error(ExceptionHandler.getExceptionMessage(e));
+                }
+            }
+            exitAndRecord();
+        }
+
+        initSystemTrayMenuItems();
+        String classPath = System.getProperty("java.class.path");
+        if (classPath == null || classPath.isBlank()) {
+            System.setProperty("java.home", ".");
+        }
+        init.run();
+        UIManager.getUIManager().setTheme(SettingsInfoHandle.getInt("ThemeMode", init.getProperties()));
+        UIManager.getUIManager().applyThemeOnSetAndRefreshWindows();
+        main = new GUIStarter("Picture Player(Version:" + PicturePlayerVersion.getVersion() + ")");
+        windowsAppMutex.addHandleSoftwareRequestAction(new HandleSoftwareRequestAction() {
+            @Override
+            public void setVisible(boolean visible) {
+                main.setVisible(visible);
+            }
+
+            @Override
+            public void receiveFile(String filePath) {
+                main.openPicture(filePath);
+            }
+        });
+        if (openingFilePath.get() != null && !openingFilePath.get().isBlank()) {
+            main.openPicture(openingFilePath.get());
+        }
+        extractedSystemInfoToLog();
+        initSystemTray();
     }
 
 

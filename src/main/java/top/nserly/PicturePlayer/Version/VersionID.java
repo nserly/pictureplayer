@@ -21,6 +21,9 @@ public class VersionID {
             .enableComplexMapKeySerialization()
             .create();
 
+    //用于启动文件
+    private String StartMainFile;
+
     //最新外部版本（稳定）
     private String NormalVersion;
 

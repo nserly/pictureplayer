@@ -18,6 +18,7 @@ public class SystemNotifications {
     //是否支持系统通知
     public static final boolean isSupportedSystemNotifications;
     public static TrayIcon DefaultIcon;
+    public static int createdSystemTrayCount;
 
     static {
         isSupportedSystemNotifications = SystemTray.isSupported();
@@ -73,6 +74,7 @@ public class SystemNotifications {
         } catch (AWTException e) {
             log.error(ExceptionHandler.getExceptionMessage(e));
         }
+        createdSystemTrayCount++;
         return tray;
     }
 

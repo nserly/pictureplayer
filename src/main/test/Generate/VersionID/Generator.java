@@ -9,6 +9,8 @@ import java.util.TreeMap;
 public class Generator {
     public static void main(String[] args) {
         VersionID versionID = new VersionID();
+        versionID.setStartMainFile("{MDWebsite}PicturePlayerRunner.exe");
+
         versionID.setNormalVersion("{version}");
         versionID.setNormalVersionID("{versionID}");
         versionID.setNormalVersionDescribe("{MDWebsite}Describe/{versionID}.txt");

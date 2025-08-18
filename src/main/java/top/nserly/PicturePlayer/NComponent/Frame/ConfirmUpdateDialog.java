@@ -14,6 +14,7 @@ import javax.swing.text.StyleContext;
 import java.awt.*;
 import java.awt.event.*;
 import java.lang.reflect.Method;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.ResourceBundle;
@@ -25,25 +26,21 @@ public class ConfirmUpdateDialog extends JDialog {
     private JLabel Title;
     private JTextArea textArea1;
     private final CheckAndDownloadUpdate downloadUpdate;
+    private static final HashSet<ConfirmUpdateDialog> createdConfirmUpdateDialogInstances = new HashSet<>();
 
     public ConfirmUpdateDialog(CheckAndDownloadUpdate update) {
         this.downloadUpdate = update;
+        synchronized (createdConfirmUpdateDialogInstances) {
+            createdConfirmUpdateDialogInstances.add(this);
+        }
         setContentPane(contentPane);
         setTitle("更新提醒");
         setModal(true);
         getRootPane().setDefaultButton(buttonCancel);
 
-        buttonCancel.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                onCancel();
-            }
-        });
+        buttonCancel.addActionListener(e -> onCancel());
 
-        buttonOK.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                onOK();
-            }
-        });
+        buttonOK.addActionListener(e -> onOK());
 
         // 点击 X 时调用 onCancel()
         setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
@@ -72,6 +69,15 @@ public class ConfirmUpdateDialog extends JDialog {
 
     public void setVisible(boolean b) {
         if (b) {
+            synchronized (createdConfirmUpdateDialogInstances) {
+                createdConfirmUpdateDialogInstances.forEach(e -> {
+                    if (e != this && e.isVisible()) {
+                        e.dispose();
+                    }
+                });
+                createdConfirmUpdateDialogInstances.clear();
+                createdConfirmUpdateDialogInstances.add(this);
+            }
             pack();
             Point location = WindowLocation.componentCenter(GUIStarter.main, getWidth(), getHeight());
             setLocation(location);
