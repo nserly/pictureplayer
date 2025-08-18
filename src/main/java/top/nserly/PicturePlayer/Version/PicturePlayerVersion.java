@@ -11,12 +11,12 @@ public class PicturePlayerVersion {
      * Release： 该版本意味“最终版本”，在前面版本的一系列测试版之后，终归会有一个正式的版本，是最终交付用户使用的一个版本。该版本有时也称标准版。
      */
     @Getter
-    private static final String version = "V1.0.0.20250816_Beta";
+    private static final String version = "V1.0.0.20250819_Beta";
     @Getter
-    private static final String ShorterVersion = "V1.0.0_Beta15";
+    private static final String ShorterVersion = "V1.0.0beta15";
     @Getter
     private static final String VersionID = "1305";
     @Getter
-    private static final String BuildVersion = "Build2025.08.16.111111";
+    private static final String BuildVersion = "Build2025.08.19.050123";
 
 }

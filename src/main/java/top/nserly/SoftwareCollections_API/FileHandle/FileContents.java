@@ -3,9 +3,7 @@ package top.nserly.SoftwareCollections_API.FileHandle;
 import lombok.extern.slf4j.Slf4j;
 import top.nserly.SoftwareCollections_API.Handler.Exception.ExceptionHandler;
 
-import java.io.BufferedReader;
-import java.io.FileReader;
-import java.io.IOException;
+import java.io.*;
 
 @Slf4j
 public class FileContents {
@@ -24,5 +22,14 @@ public class FileContents {
             log.error(ExceptionHandler.getExceptionMessage(e));
         }
         return null;
+    }
+
+    public static void write(String path, String content) {
+        try (FileWriter fileWriter = new FileWriter(path); BufferedWriter bufferedWriter = new BufferedWriter(fileWriter)) {
+            bufferedWriter.write(content);
+            bufferedWriter.flush();
+        } catch (IOException e) {
+            log.error(ExceptionHandler.getExceptionMessage(e));
+        }
     }
 }

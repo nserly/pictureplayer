@@ -1,6 +1,9 @@
 package Generate.VersionID;
 
+import top.nserly.PicturePlayer.Version.PicturePlayerVersion;
 import top.nserly.PicturePlayer.Version.VersionID;
+import top.nserly.SoftwareCollections_API.FileHandle.FileContents;
+import top.nserly.SoftwareCollections_API.FileHandle.JarFileRenamer;
 
 import java.io.File;
 import java.util.HashMap;
@@ -23,8 +26,8 @@ public class Generator {
 
 
         HashMap<String, String> SpecialFields = new HashMap<>();
-        SpecialFields.put("version", "V1.0.0beta15");
-        SpecialFields.put("versionID", "1315");
+        SpecialFields.put("version", PicturePlayerVersion.getShorterVersion());
+        SpecialFields.put("versionID", PicturePlayerVersion.getVersionID());
         SpecialFields.put("MDWebsite", "https://gitee.com/nserly-huaer/ImagePlayer/raw/master/artifacts/PicturePlayer_jar/");
         SpecialFields.put("LibWebsite", "https://gitee.com/nserly-huaer/ImagePlayer/raw/master/artifacts/PicturePlayer_jar/lib/");
 
@@ -35,7 +38,22 @@ public class Generator {
         versionID.setNormalDependencies(dependencies);
 //        versionID.setTestDependencies(dependencies);
         versionID.setSpecialFields(SpecialFields);
-        System.out.println(VersionID.gson.toJson(versionID));
+        String versionIDJson = VersionID.gson.toJson(versionID);
+        System.out.println(versionIDJson);
+        FileContents.write("artifacts/PicturePlayer_jar/VersionID.sum", versionIDJson);
+
+        File file = new File("artifacts/PicturePlayer_jar/PicturePlayer.jar");
+        if (file.exists()) {
+            File renameToFile = new File("artifacts/PicturePlayer_jar/" + SpecialFields.get("version") + ".jar");
+            if (renameToFile.exists()) {
+                if (!renameToFile.delete()) {
+                    throw new RuntimeException("Delete old File Error");
+                }
+            }
+            if (!file.renameTo(renameToFile)) {
+                throw new RuntimeException("Rename Main File Error");
+            }
+        }
     }
 
     private static TreeMap<String, String> getTreeMap() {
@@ -43,6 +61,7 @@ public class Generator {
         File[] files = new File("artifacts/PicturePlayer_jar/lib/").listFiles();
         if (files != null) {
             for (File file : files) {
+                file = JarFileRenamer.renameJarFile(file);
                 if (file.getName().endsWith(".jar") && file.isFile()) {
                     String dependencyName = file.getName();
                     if (dependencies.containsKey(dependencyName.substring(0, dependencyName.lastIndexOf("-")))) {
@@ -52,7 +71,10 @@ public class Generator {
                 }
             }
         }
-
+        System.out.println("Dependency counts:" + dependencies.size());
+        if (files != null && files.length != dependencies.size()) {
+            throw new RuntimeException("Dependencies are incomplete!");
+        }
         return dependencies;
     }
 }
