@@ -41,10 +41,15 @@ public class Generator {
     private static TreeMap<String, String> getTreeMap() {
         TreeMap<String, String> dependencies = new TreeMap<>();
         File[] files = new File("artifacts/PicturePlayer_jar/lib/").listFiles();
-        for (File file : files) {
-            if (file.getName().endsWith(".jar") && file.isFile()) {
-                String dependencyName = file.getName();
-                dependencies.put(dependencyName.substring(0, dependencyName.lastIndexOf("-")), "{LibWebsite}" + dependencyName);
+        if (files != null) {
+            for (File file : files) {
+                if (file.getName().endsWith(".jar") && file.isFile()) {
+                    String dependencyName = file.getName();
+                    if (dependencies.containsKey(dependencyName.substring(0, dependencyName.lastIndexOf("-")))) {
+                        throw new RuntimeException("Dependency Name Conflict: " + dependencyName);
+                    }
+                    dependencies.put(dependencyName.substring(0, dependencyName.lastIndexOf("-")), "{LibWebsite}" + dependencyName);
+                }
             }
         }
 
