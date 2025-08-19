@@ -196,23 +196,24 @@ public class TCP_ServerSocket {
     }
 
     public void close() throws IOException {
+        if (serverSocket != null)
+            serverSocket.close();
         Thread closeConnectClient = null;
         if (waitForConnectClient != null) {
             closeConnectClient = new Thread(waitForConnectClient::stop);
             closeConnectClient.start();
         }
-        if (serverSocket != null)
-            serverSocket.close();
         if (ThreadPool != null) {
             ThreadPool.close();
         }
         if (closeConnectClient != null)
             try {
+                // 让其静默1分钟 (doge)
                 Thread.sleep(1000);
             } catch (InterruptedException ignored) {
 
             }
-        System.exit(0);
+
     }
 
     public void removeBlackIP(String BlackIP) {

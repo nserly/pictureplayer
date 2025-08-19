@@ -3,6 +3,9 @@ package top.nserly.SoftwareCollections_API.FileHandle;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.File;
+import java.io.IOException;
+import java.util.HashSet;
+import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -12,6 +15,18 @@ public class JarFileRenamer {
     // 匹配模式的正则表达式
     private static final Pattern FILENAME_PATTERN =
             Pattern.compile("(.+?)-(\\d+\\.\\d+\\.\\d+\\.Final)(-.+?)\\.jar$");
+
+    public static HashSet<File> renameJarFile(String dir) throws IOException {
+        File dirFile = new File(dir);
+        if (!dirFile.exists()) throw new IOException(dir + " is not exists!");
+        if (!dirFile.isDirectory()) throw new IOException(dir + " is not a directory!");
+        HashSet<File> hashSet = new HashSet<>();
+        for (File originalFile : Objects.requireNonNull(dirFile.listFiles())) {
+            if (!originalFile.isFile()) continue;
+            hashSet.add(renameJarFile(originalFile));
+        }
+        return hashSet;
+    }
 
 
     public static File renameJarFile(File file) {
@@ -36,6 +51,12 @@ public class JarFileRenamer {
                 // Get parent directory and create new file object
                 File parentDir = file.getParentFile();
                 File newFile = new File(parentDir, newFileName);
+
+                if (newFile.exists())
+                    if (newFile.delete())
+                        log.info("Delete old file successfully: {}", newFileName);
+                    else
+                        log.error("Failed to delete old file: {}", newFileName);
 
                 // Perform rename operation
                 boolean renamed = file.renameTo(newFile);

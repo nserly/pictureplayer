@@ -4,13 +4,16 @@ import top.nserly.PicturePlayer.Version.PicturePlayerVersion;
 import top.nserly.PicturePlayer.Version.VersionID;
 import top.nserly.SoftwareCollections_API.FileHandle.FileContents;
 import top.nserly.SoftwareCollections_API.FileHandle.JarFileRenamer;
+import top.nserly.SoftwareCollections_API.FileHandle.JarVersionCleaner;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.TreeMap;
 
 public class Generator {
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
         VersionID versionID = new VersionID();
         versionID.setStartMainFile("{MDWebsite}PicturePlayerRunner.exe");
 
@@ -56,23 +59,24 @@ public class Generator {
         }
     }
 
-    private static TreeMap<String, String> getTreeMap() {
+    private static TreeMap<String, String> getTreeMap() throws IOException {
         TreeMap<String, String> dependencies = new TreeMap<>();
-        File[] files = new File("artifacts/PicturePlayer_jar/lib/").listFiles();
-        if (files != null) {
-            for (File file : files) {
-                file = JarFileRenamer.renameJarFile(file);
-                if (file.getName().endsWith(".jar") && file.isFile()) {
-                    String dependencyName = file.getName();
-                    if (dependencies.containsKey(dependencyName.substring(0, dependencyName.lastIndexOf("-")))) {
-                        throw new RuntimeException("Dependency Name Conflict: " + dependencyName);
-                    }
-                    dependencies.put(dependencyName.substring(0, dependencyName.lastIndexOf("-")), "{LibWebsite}" + dependencyName);
+        final File libFile = new File("artifacts/PicturePlayer_jar/lib/");
+        JarVersionCleaner.cleanOldVersions(libFile.getPath(), false);
+
+        HashSet<File> hashSet = JarFileRenamer.renameJarFile(libFile.getPath());
+        for (File file : hashSet) {
+            if (file.getName().endsWith(".jar") && file.isFile()) {
+                String dependencyName = file.getName();
+                if (dependencies.containsKey(dependencyName.substring(0, dependencyName.lastIndexOf("-")))) {
+                    throw new RuntimeException("Dependency Name Conflict: " + dependencyName);
                 }
+                dependencies.put(dependencyName.substring(0, dependencyName.lastIndexOf("-")), "{LibWebsite}" + dependencyName);
             }
         }
+
         System.out.println("Dependency counts:" + dependencies.size());
-        if (files != null && files.length != dependencies.size()) {
+        if (hashSet.size() != dependencies.size()) {
             throw new RuntimeException("Dependencies are incomplete!");
         }
         return dependencies;

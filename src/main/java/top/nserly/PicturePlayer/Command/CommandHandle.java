@@ -2,7 +2,7 @@ package top.nserly.PicturePlayer.Command;
 
 import lombok.extern.slf4j.Slf4j;
 import top.nserly.GUIStarter;
-import top.nserly.PicturePlayer.Version.DownloadChecker.CheckAndDownloadUpdate;
+import top.nserly.SoftwareCollections_API.FileHandle.JarVersionCleaner;
 import top.nserly.SoftwareCollections_API.Handler.Exception.ExceptionHandler;
 import top.nserly.SoftwareCollections_API.String.RandomString;
 
@@ -23,6 +23,8 @@ public class CommandHandle {
     private static final String CURRENT_JAR_PARENT_PATH;
 
     private static final String MainFileSuffix;
+
+    private static final StringBuilder CommandComplement = new StringBuilder();
 
     static {
         ClassLoader classLoader = CommandHandle.class.getClassLoader();
@@ -59,23 +61,12 @@ public class CommandHandle {
     public static void moveFileToLibDirectory(ArrayList<String> DownloadLibFilePath) throws IOException {
         for (String string : DownloadLibFilePath) {
             string = string.replace("\\", "/");
-            String fileName = new File(string).getName();
-            int LastIndex1 = fileName.lastIndexOf("-");
-            if (LastIndex1 == -1) {
-                LastIndex1 = fileName.lastIndexOf(".jar");
-            }
-            String currentHandlerDependencyName = fileName.substring(0, LastIndex1);
-            for (String DependencyName : CheckAndDownloadUpdate.DependenciesName) {
-                if (DependencyName.contains(currentHandlerDependencyName)) {
-                    String deleteFilePath = CheckAndDownloadUpdate.DependenciesFilePath.get(DependencyName);
-                    new File(deleteFilePath).delete();
-                }
-            }
 
             Path sourcePath = Path.of(string);
             Path destinationPath = Path.of("./lib/" + string.substring(string.lastIndexOf("/") + 1));
             Files.move(sourcePath, destinationPath, StandardCopyOption.REPLACE_EXISTING);
         }
+        JarVersionCleaner.cleanOldVersions("./lib/", true).forEach(CommandHandle::addDeletedStatement);
         log.info("Lib File moved successfully.");
     }
 
@@ -132,6 +123,7 @@ public class CommandHandle {
                 + "  del /f /q \".\\" + CURRENT_JAR_NAME + "\"\n"  // 强制删除
                 + ")\n"
                 + "ren \"" + fileName + MainFileSuffix + "\" \"" + CURRENT_JAR_NAME + "\"\n"
+                + CommandComplement + "\n"
                 + "cls\n"
                 // 使用java.home获取可靠的Java路径
                 + "\"" + System.getProperty("java.home") + "\\bin\\java.exe\" "
@@ -189,6 +181,19 @@ public class CommandHandle {
         Runtime.getRuntime().exec(new String[]{"sh", "-c", "nohup sh ./replace.sh >/dev/null 2>&1 &"});
         log.info("Program Termination!");
         GUIStarter.exitAndRecord();
+    }
+
+    private static void addDeletedStatement(String file) {
+        String osName = System.getProperty("os.name").toLowerCase();
+        if (osName.contains("win")) {
+            CommandComplement.append("del /f /q \".\\").append(file).append("\"\n");
+            CommandComplement.append("if exist \".\\").append(file).append("\" (\n")
+                    .append("  del /f /q \".\\").append(file).append("\"\n").append(")\n");
+        } else if (osName.contains("nix") || osName.contains("nux") || osName.contains("aix")) {
+            CommandComplement.append("rm ").append(file).append("\n");
+        } else {
+            throw new RuntimeException("OS is not supported currently!");
+        }
     }
 
 }

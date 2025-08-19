@@ -177,6 +177,11 @@ public class GUIStarter extends JFrame {
     private JComboBox<String> CloseMainFrameControlComboBox;
 
     static {
+        String classPath = System.getProperty("java.class.path");
+        if (classPath == null || classPath.isBlank()) {
+            System.setProperty("java.home", ".");
+        }
+
         ExceptionHandler.setUncaughtExceptionHandler(log);
         //初始化Init
         init = new Init<>();
@@ -330,12 +335,6 @@ public class GUIStarter extends JFrame {
         };
     }
 
-    private static void closeInformation() {
-        if (PaintPicturePanel.paintPicture != null && PaintPicturePanel.paintPicture.sizeOperate != null)
-            PaintPicturePanel.paintPicture.sizeOperate.close();
-        if (main != null) main.dispose();
-    }
-
     private static void extractedSystemInfoToLog() {
         //获取操作系统版本
         log.info("OS:{}", SystemMonitor.OS_NAME);
@@ -369,12 +368,14 @@ public class GUIStarter extends JFrame {
     }
 
     public static void exitAndRecord() {
-        windowsAppMutex.close();
-        closeInformation();
+        if (main != null) main.dispose();
         if (GUIStarter.systemTray != null) {
             GUIStarter.systemTray.remove(SystemNotifications.DefaultIcon);
             GUIStarter.systemTray = null;
         }
+        if (PaintPicturePanel.paintPicture != null && PaintPicturePanel.paintPicture.sizeOperate != null)
+            PaintPicturePanel.paintPicture.sizeOperate.close();
+        windowsAppMutex.close();
         log.info("Program Termination!");
         System.exit(0);
     }
@@ -1232,10 +1233,6 @@ public class GUIStarter extends JFrame {
         }
 
         initSystemTrayMenuItems();
-        String classPath = System.getProperty("java.class.path");
-        if (classPath == null || classPath.isBlank()) {
-            System.setProperty("java.home", ".");
-        }
         init.run();
         UIManager.getUIManager().setTheme(SettingsInfoHandle.getInt("ThemeMode", init.getProperties()));
         UIManager.getUIManager().applyThemeOnSetAndRefreshWindows();
