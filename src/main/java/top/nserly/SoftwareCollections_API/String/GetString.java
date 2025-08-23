@@ -25,4 +25,41 @@ public class GetString {
         }
         return null;
     }
+
+    /**
+     * 处理字符串，删除{...}中包含的所有空格
+     * @param input 输入字符串
+     * @return 处理后的字符串
+     */
+    public static String removeSpacesInCurlyBraces(String input) {
+        // 检查输入是否为null
+        if (input == null) {
+            return null;
+        }
+
+        // 使用StringBuilder构建结果
+        StringBuilder result = new StringBuilder();
+        // 标记是否在花括号内
+        boolean inCurlyBraces = false;
+
+        // 遍历字符串的每个字符
+        for (char c : input.toCharArray()) {
+            // 遇到左花括号，标记开始
+            if (c == '{') {
+                inCurlyBraces = true;
+                result.append(c);
+            }
+            // 遇到右花括号，标记结束
+            else if (c == '}') {
+                inCurlyBraces = false;
+                result.append(c);
+            }
+            // 其他情况直接添加字符
+            else if (!(inCurlyBraces && Character.isWhitespace(c))) {
+                result.append(c);
+            }
+        }
+
+        return result.toString();
+    }
 }

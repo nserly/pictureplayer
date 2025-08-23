@@ -11,6 +11,7 @@ import top.nserly.PicturePlayer.Version.PicturePlayerVersion;
 import top.nserly.PicturePlayer.Version.VersionID;
 import top.nserly.SoftwareCollections_API.DownloadFile.FileDownloader;
 import top.nserly.SoftwareCollections_API.FileHandle.FileContents;
+import top.nserly.SoftwareCollections_API.Handler.Exception.ExceptionHandler;
 
 import javax.net.ssl.*;
 import javax.swing.*;
@@ -116,7 +117,7 @@ public class CheckAndDownloadUpdate {
                     SSLSocketFactory ssf = sc.getSocketFactory();
                     HttpsURLConnection.setDefaultSSLSocketFactory(ssf);
                 } catch (NoSuchAlgorithmException | KeyManagementException e) {
-                    log.error(e.getMessage());
+                    log.error(ExceptionHandler.getExceptionMessage(e));
                     return;
                 }
                 log.info("SSL validation is enabled");
@@ -146,13 +147,12 @@ public class CheckAndDownloadUpdate {
 
         AtomicReference<IOException> exception = new AtomicReference<>();
         FileDownloader fileDownloader = new FileDownloader(webSide, f.getPath());
-        fileDownloader.setDownloadErrorHandler((e, f) -> {
-            exception.set(e);
-        });
+        fileDownloader.setDownloadErrorHandler((e, f) -> exception.set(e));
         fileDownloader.startDownload();
         if (exception.get() != null) throw exception.get();
         versionID = VersionID.gson.fromJson(FileContents.read(fileDownloader.getFinalPath()), VersionID.class);
-        new File(fileDownloader.getFinalPath()).delete();
+        File file = new File(fileDownloader.getFinalPath());
+        if (!file.delete()) log.warn("{} cannot delete", file.getPath());
         if (versionID != null) {
             NewVersionID = Long.parseLong(VersionID.getString(versionID.getNormalVersionID(), versionID.getSpecialFields()));
         }
@@ -177,15 +177,15 @@ public class CheckAndDownloadUpdate {
                 if (!DependenciesName.contains(dependenciesName))
                     DependenciesWebSite.add(VersionID.getString(dependenciesWebsite, versionID.getSpecialFields()));
             }
-        downloadFileWebSite = (ArrayList<String>) DependenciesWebSite.clone();
+        downloadFileWebSite = new ArrayList<>(DependenciesWebSite);
         downloadFileWebSite.add(MainFileWebSite);
 
         if (NewVersionID <= Long.parseLong(PicturePlayerVersion.getVersionID())) {
-            log.info("You are using the latest version: " + PicturePlayerVersion.getVersionID());
+            log.info("You are using the latest version: {}", PicturePlayerVersion.getVersionID());
             return false;
         }
-        log.info("New version found: " + NewVersionID + " (" + NewVersionName + ")");
-        log.info("Download file web site: " + downloadFileWebSite);
+        log.info("New version found: {} ({})", NewVersionID, NewVersionName);
+        log.info("Download file web site: {}", downloadFileWebSite);
         if (downloadFileWebSite.isEmpty()) {
             log.warn("No files to download!");
             return false;
@@ -194,9 +194,9 @@ public class CheckAndDownloadUpdate {
     }
 
     //一键下载所有文件(Map(Key:下载网站,Value:List[0]:文件存放路径;[1]下载类))[调用此方法时，推进使用新线程，否则窗体可能会无相应]
-    public Map<String, ArrayList> download(List<String> downloadWebSide) {
+    public Map<String, ArrayList<?>> download(List<String> downloadWebSide) {
         StopToUpdate = false;
-        Map<String, ArrayList> finalA = new HashMap<>();
+        Map<String, ArrayList<?>> finalA = new HashMap<>();
         if (downloadWebSide == null) return null;
         int index = 0;
         TotalDownloadingFile = downloadWebSide.size();
@@ -221,7 +221,7 @@ public class CheckAndDownloadUpdate {
     }
 
     //返回值：0.下载完成 1.跳过当前文件 2.取消下载
-    private int download(String down, Map<String, ArrayList> finalA, boolean isTry) {
+    private int download(String down, Map<String, ArrayList<?>> finalA, boolean isTry) {
         try {
             if (StopToUpdate) {
                 throw new UpdateException("Update ended,cause of User terminated software update");
@@ -237,10 +237,10 @@ public class CheckAndDownloadUpdate {
                     stopToUpdate();
                 }
             });
-            log.info("Downloading " + down);
+            log.info("Downloading {}", down);
             if (!EnableSecureConnection) log.warn("The connection is not secure from {}!", down);
             CurrentFileDownloader.startDownload();
-            ArrayList list = new ArrayList();
+            ArrayList<Object> list = new ArrayList<>();
             String cache = CurrentFileDownloader.getFinalPath();
             if (StopToUpdate) {
                 throw new UpdateException("Update ended,cause of User terminated software update");
@@ -262,13 +262,13 @@ public class CheckAndDownloadUpdate {
     }
 
     //一键下载所有文件(Map(Key:下载网站,Value:List[0]:文件存放路径;[1]下载类))[调用此方法时，推进使用新线程，否则窗体可能会无相应]
-    public Map<String, ArrayList> download() {
+    public Map<String, ArrayList<?>> download() {
         StopToUpdate = false;
         return download(getUpdateWebSide());
     }
 
     //下载描述文件List[0]:文件存放路径;[1]下载类[调用此方法时，推进使用新线程，否则窗体可能会无相应]
-    public List downloadDescribe() {
+    public List<?> downloadDescribe() {
         log.info("Start downloading describe version file...");
         StopToUpdate = false;
         String DescribeFileWebSide = VersionID.getString(versionID.getNormalVersionDescribe(), versionID.getSpecialFields());
@@ -286,7 +286,6 @@ public class CheckAndDownloadUpdate {
 
     private int exceptionHandling(IOException e) {
         log.error(e.getMessage());
-        int choice = JOptionPane.showOptionDialog(null, Bundle.getMessage("DownloadUpdateError_Content") + "\n" + e, Bundle.getMessage("DownloadUpdateError_Title"), JOptionPane.DEFAULT_OPTION, JOptionPane.QUESTION_MESSAGE, null, options, options);
-        return choice;
+        return JOptionPane.showOptionDialog(null, Bundle.getMessage("DownloadUpdateError_Content") + "\n" + e, Bundle.getMessage("DownloadUpdateError_Title"), JOptionPane.DEFAULT_OPTION, JOptionPane.QUESTION_MESSAGE, null, options, options);
     }
 }

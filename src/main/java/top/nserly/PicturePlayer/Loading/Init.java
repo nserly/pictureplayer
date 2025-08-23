@@ -1,7 +1,6 @@
 package top.nserly.PicturePlayer.Loading;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.*;
 import java.lang.reflect.Method;
@@ -10,6 +9,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+@Slf4j
 public class Init<KEY, VALUE> {
     private static final AtomicBoolean isInit = new AtomicBoolean();
     private final File f = new File("data/configuration.ch");
@@ -17,7 +17,6 @@ public class Init<KEY, VALUE> {
     private boolean EnableAutoUpdate;
     private static final String[] createDirectory = {"data", "lib", "cache", "cache/PictureCache", "cache/thum", "download"};
     private static final String[] createFile = {"data/PictureCacheManagement.obj"};
-    private static final Logger logger = LoggerFactory.getLogger(Init.class);
 
     public static void init() {
         synchronized (isInit) {
@@ -27,13 +26,15 @@ public class Init<KEY, VALUE> {
                 for (String directory : createDirectory) {
                     dire = new File(directory);
                     if (!dire.exists()) {
-                        dire.mkdir();
+                        if (!dire.mkdir())
+                            log.warn("{} cannot mkdir", dire.getPath());
                     }
                 }
                 for (String file : createFile) {
                     dire = new File(file);
                     if (!dire.exists()) {
-                        dire.createNewFile();
+                        if (!dire.createNewFile())
+                            log.warn("{} cannot create", dire.getPath());
                     }
                 }
             } catch (IOException e) {
@@ -50,7 +51,8 @@ public class Init<KEY, VALUE> {
     public static void clearDirectory(File directory) {
         if (!directory.exists()) return;
         if (directory.isFile()) {
-            directory.delete();
+            if (!directory.delete())
+                log.warn("{} cannot delete", directory.getPath());
             return;
         }
         File[] files = directory.listFiles();
@@ -58,10 +60,12 @@ public class Init<KEY, VALUE> {
             for (File file : files) {
                 if (file.isDirectory()) {
                     clearDirectory(file);
-                    file.delete();
+                    if (!file.delete())
+                        log.warn("{} cannot delete", file.getPath());
                     continue;
                 }
-                file.delete();
+                if (!file.delete())
+                    log.warn("{} cannot delete", file.getPath());
             }
         }
     }
@@ -75,7 +79,7 @@ public class Init<KEY, VALUE> {
             properties.clear();
             properties.load(new BufferedReader(new FileReader(f)));
         } catch (IOException e) {
-            logger.error("Failed to read the configuration file");
+            log.error("Failed to read the configuration file");
         }
     }
 
@@ -109,12 +113,12 @@ public class Init<KEY, VALUE> {
     @SafeVarargs
     public final void remove(KEY... key) {
         for (KEY i : key) {
-            properties.remove(key);
+            properties.remove(i);
         }
         if (EnableAutoUpdate) store();
     }
 
-    public void writer(Map<KEY, VALUE> map) {
+    public void writer(Map<?, ?> map) {
         if (!isInit.get()) init();
         properties.putAll(map);
         store();
@@ -127,11 +131,11 @@ public class Init<KEY, VALUE> {
     }
 
     @DefaultArgs
-    public Map<KEY,VALUE> setDefault() {
-        HashMap<KEY, VALUE> hashMap = new HashMap<>();
+    public Map<String, Object> setDefault() { // 修改这里的泛型为 <String, Object>
+        HashMap<String, Object> hashMap = new HashMap<>();
         var method = DefaultArgs.class.getDeclaredMethods();
         for (Method i : method) {
-            hashMap.put((KEY) i.getName(), (VALUE) i.getDefaultValue());
+            hashMap.put(i.getName(), i.getDefaultValue()); // 现在应该可以正确地添加键值对
         }
         return hashMap;
     }
@@ -141,7 +145,7 @@ public class Init<KEY, VALUE> {
         try {
             properties.store(new BufferedWriter(new FileWriter(f)), "");
         } catch (Exception e) {
-            logger.error("Failed to save the configuration file");
+            log.error("Failed to save the configuration file");
         }
     }
 }

@@ -328,15 +328,6 @@
                               <text resource-bundle="messages" key="ThemeModeLabel"/>
                             </properties>
                           </component>
-                          <component id="bb846" class="javax.swing.JComboBox" binding="ThemeModeComboBox">
-                            <constraints>
-                              <grid row="1" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="2" anchor="8" fill="1" indent="0" use-parent-layout="false"/>
-                            </constraints>
-                            <properties>
-                              <model/>
-                              <requestFocusEnabled value="false"/>
-                            </properties>
-                          </component>
                           <component id="f8e84" class="javax.swing.JLabel">
                             <constraints>
                               <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
@@ -345,9 +336,15 @@
                               <text resource-bundle="messages" key="Settings_ExitControlLabel"/>
                             </properties>
                           </component>
-                          <component id="77ecc" class="javax.swing.JComboBox" binding="CloseMainFrameControlComboBox">
+                          <component id="b4350" class="top.nserly.PicturePlayer.NComponent.Component.NComboBox" binding="CloseMainFrameControlComboBox">
                             <constraints>
-                              <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="2" anchor="8" fill="1" indent="0" use-parent-layout="false"/>
+                              <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="2" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
+                            </constraints>
+                            <properties/>
+                          </component>
+                          <component id="27f98" class="top.nserly.PicturePlayer.NComponent.Component.NComboBox" binding="ThemeModeComboBox">
+                            <constraints>
+                              <grid row="1" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="2" anchor="0" fill="1" indent="0" use-parent-layout="false"/>
                             </constraints>
                             <properties/>
                           </component>

@@ -181,9 +181,7 @@ public class PaintPicturePanel extends JPanel {
     }
 
     private void init_Listener() {
-        FullScreen.addActionListener(e -> {
-            GUIStarter.main.paintPicture.imageCanvas.setFullScreen(true);
-        });
+        FullScreen.addActionListener(e -> GUIStarter.main.paintPicture.imageCanvas.setFullScreen(true));
         //点击时间
         AtomicLong ClickedTime = new AtomicLong();
         //规定时间内点击次数
@@ -225,13 +223,9 @@ public class PaintPicturePanel extends JPanel {
             ClickedTime.set(System.currentTimeMillis());
         });
         //创建图片顺时针按钮监听器
-        clockwise.addActionListener(e -> {
-            imageCanvas.turnLeft();
-        });
+        clockwise.addActionListener(e -> imageCanvas.turnLeft());
         //创建图片顺时针按钮监听器
-        counterclockwise.addActionListener(e -> {
-            imageCanvas.turnRight();
-        });
+        counterclockwise.addActionListener(e -> imageCanvas.turnRight());
         //添加面板大小改变监听器
         addComponentListener(new ComponentAdapter() {
             @Override
@@ -874,7 +868,7 @@ public class PaintPicturePanel extends JPanel {
                 return;
             }
             //如果转动角度为0或180度，请无使用此值，此值为旋转其他度数的设计
-            double tempHeight = 0, tempWidth = 0;
+            double tempHeight, tempWidth;
             tempWidth = lastHeight;
             tempHeight = lastWidth;
             //如果旋转角度不为0度，则转换x,y值（因为坐标轴）
@@ -892,7 +886,7 @@ public class PaintPicturePanel extends JPanel {
             }
 
             double width;
-            double WindowHeight = 0, WindowWidth = 0, LastWindowHeight = 0, LastWindowWidth = 0;
+            double WindowHeight, WindowWidth, LastWindowHeight, LastWindowWidth;
             //尝试获取之前和现在的组件大小信息
             WindowWidth = NewWindow.getWidth();
             WindowHeight = NewWindow.getHeight();
@@ -962,8 +956,8 @@ public class PaintPicturePanel extends JPanel {
                     mouseY = (WindowWidth / 2);
                 }
             }
-            double WidthRatio = 0;
-            double HeightRatio = 0;
+            double WidthRatio;
+            double HeightRatio;
             double PictureChangeRatio = 1;
             if (WindowWidth != 0 && WindowHeight != 0) {
                 WidthRatio = LastWindowWidth / WindowWidth;

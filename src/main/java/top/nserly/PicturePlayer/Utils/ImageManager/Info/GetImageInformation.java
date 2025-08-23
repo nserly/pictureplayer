@@ -109,7 +109,7 @@ public class GetImageInformation {
         GraphicsConfiguration gc = gd.getDefaultConfiguration();
 
         // 创建兼容的 VolatileImage（尺寸与 BufferedImage 一致）
-        VolatileImage volatileImage = null;
+        VolatileImage volatileImage;
         do {
             volatileImage = gc.createCompatibleVolatileImage(source.getWidth(), source.getHeight(), VolatileImage.OPAQUE // 根据需求选择透明度模式
             );
@@ -270,7 +270,7 @@ public class GetImageInformation {
     // 如果需要处理大量文件，建议使用此方法以提高性能
     // 注意：此方法会在计算hashcode时使用虚拟线程，可能会导致一些性能问题，具体取决于文件大小和数量
     public static HashMap<String, String> getHashcode(String[] files) {
-        try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();) {
+        try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()) {
             Map<String, Future<String>> futures = new HashMap<>();
 
             for (String filePath : files) {

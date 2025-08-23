@@ -18,20 +18,27 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 @Slf4j
 public class FileDownloader implements Runnable {
+    // 配置常量
+    @Getter
+    private static final int BUFFER_SIZE = 524_288; // 512KB缓冲区
+    @Setter
+    private long maxSpeedBytesPerSecond = -1; // 速度限制（字节/秒）
+    private long lastSpeedCheckTime = 0;
     private int redirectCount = 0;
     private static final int MAX_REDIRECTS = 5;
-
-    // 配置常量
-    private static final int BUFFER_SIZE = 524_288; // 512KB缓冲区
+    private long bytesSinceLastCheck = 0;
     private static final int CONNECT_TIMEOUT = 5_000;
     private static final int READ_TIMEOUT = 5_000;
     private static final String TEMP_SUFFIX = ".download";
     private static final int PROGRESS_UPDATE_INTERVAL = 100; // 进度更新间隔(ms)
-
     // 下载状态
+    @Getter
+    private Thread downloadThread;
     private final AtomicBoolean isStopped = new AtomicBoolean(false);
     private final AtomicBoolean isCompleted = new AtomicBoolean(false);
     private final AtomicLong bytesRead = new AtomicLong(0);
+
+
     // 状态获取方法
     @Getter
     private volatile long fileSize = -1;
@@ -42,6 +49,8 @@ public class FileDownloader implements Runnable {
     // 文件信息
     private String sourceUrl;
     private final String saveDirectory;
+    // 设置最终文件名（用于分片下载）
+    @Setter
     private String finalFileName;
     private String tempFilePath;
 
@@ -80,6 +89,7 @@ public class FileDownloader implements Runnable {
 
     @Override
     public void run() {
+        downloadThread = Thread.currentThread();
         try {
             if (bytesRead.get() > 0) {
                 resumeDownload();
@@ -95,6 +105,10 @@ public class FileDownloader implements Runnable {
         } finally {
             cleanResources();
         }
+    }
+
+    public boolean isStopped() {
+        return isStopped.get();
     }
 
     /**
@@ -162,7 +176,51 @@ public class FileDownloader implements Runnable {
                 os.write(buffer, 0, readBytes);
                 updateProgress(readBytes);
                 calculateMetrics();
+
+                // 速度控制逻辑
+                if (maxSpeedBytesPerSecond > 0) {
+                    controlSpeed(readBytes);
+                }
             }
+        }
+    }
+
+    // 速度控制实现
+    private void controlSpeed(int bytesRead) throws IOException {
+        long currentTime = System.currentTimeMillis();
+        if (lastSpeedCheckTime == 0) {
+            lastSpeedCheckTime = currentTime;
+        }
+        bytesSinceLastCheck += bytesRead;
+
+        long elapsedMs = currentTime - lastSpeedCheckTime;
+        // 每100ms检查一次速度
+        if (elapsedMs >= 100) {
+            // 计算当前速度（字节/秒）
+            double currentSpeed = (bytesSinceLastCheck * 1000.0) / elapsedMs;
+            // 如果超过限制，计算需要休眠的时间
+            if (currentSpeed > maxSpeedBytesPerSecond) {
+                // 理论上应该传输的字节数
+                long expectedBytes = (long) (maxSpeedBytesPerSecond * elapsedMs / 1000.0);
+                long excessBytes = bytesSinceLastCheck - expectedBytes;
+                // 计算需要休眠的时间（毫秒）
+                long sleepMs = (long) (excessBytes * 1000.0 / maxSpeedBytesPerSecond);
+                if (sleepMs > 0) {
+                    try {
+                        Thread.sleep(sleepMs);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        throw new IOException("The download is interrupted", e);
+                    }
+                    // 调整时间戳，补偿休眠时间
+                    lastSpeedCheckTime = System.currentTimeMillis();
+                } else {
+                    lastSpeedCheckTime = currentTime;
+                }
+            } else {
+                lastSpeedCheckTime = currentTime;
+            }
+            bytesSinceLastCheck = 0;
         }
     }
 
@@ -170,7 +228,7 @@ public class FileDownloader implements Runnable {
     /**
      * 创建HTTP连接
      */
-    private HttpURLConnection createConnection(boolean isResume) throws IOException {
+    public HttpURLConnection createConnection(boolean isResume) throws IOException {
         int retry = 0;
         while (retry++ < 3) {
             try {
@@ -292,7 +350,9 @@ public class FileDownloader implements Runnable {
                     out.write(buf, 0, len);
                 }
             }
-            tempFile.delete();
+            if (!tempFile.delete()) {
+                log.warn("{} cannot clean up temporary file", tempFilePath);
+            }
         }
 
         isCompleted.set(true);
@@ -316,7 +376,10 @@ public class FileDownloader implements Runnable {
      */
     private void cleanResources() {
         if (isStopped.get() && !isCompleted.get()) {
-            new File(tempFilePath).delete();
+            if (!new File(tempFilePath).delete()) {
+                log.warn("{} cannot clean up temporary file", tempFilePath);
+                return;
+            }
             log.info("Cleaned temp file");
         }
     }

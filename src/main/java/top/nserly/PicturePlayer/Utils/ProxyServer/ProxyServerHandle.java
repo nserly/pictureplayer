@@ -19,7 +19,8 @@ public class ProxyServerHandle {
         fileManager = new ProxyServerFileManage();
         if (!this.savePath.exists()) {
             try {
-                this.savePath.createNewFile();
+                if(!this.savePath.createNewFile())
+                    log.warn("{} cannot create",this.savePath.getPath());
             } catch (IOException e) {
                 log.error(e.getMessage());
             }

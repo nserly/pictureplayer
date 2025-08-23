@@ -4,9 +4,7 @@ import org.slf4j.Logger;
 
 public class ExceptionHandler {
     public static void setUncaughtExceptionHandler(Logger log) {
-        Thread.setDefaultUncaughtExceptionHandler((e1, e2) -> {
-            log.error(getExceptionMessage(e2));
-        });
+        Thread.setDefaultUncaughtExceptionHandler((e1, e2) -> log.error(getExceptionMessage(e2)));
     }
 
     public static String getExceptionMessage(Throwable e) {

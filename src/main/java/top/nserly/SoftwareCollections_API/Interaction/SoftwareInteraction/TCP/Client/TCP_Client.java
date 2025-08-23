@@ -93,7 +93,7 @@ public class TCP_Client {
         String IP = ServerIP;
         int Port = ServerPort;
         socket = new Socket(IP, Port);
-        Constructor<? extends Interactions> constructor = null;
+        Constructor<? extends Interactions> constructor;
         try {
             constructor = interactions.getConstructor(Socket.class);
             interaction = constructor.newInstance(socket);

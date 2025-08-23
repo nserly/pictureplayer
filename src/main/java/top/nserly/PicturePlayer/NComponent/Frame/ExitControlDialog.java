@@ -54,12 +54,8 @@ public class ExitControlDialog extends JDialog {
         });
         // 遇到 ESCAPE 时调用 onCancel()
         contentPane.registerKeyboardAction(e -> onCancel(), KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT);
-        ExitDirectlyButton.addActionListener(e -> {
-            ExitToSystemTrayButton.setSelected(!ExitDirectlyButton.isSelected());
-        });
-        ExitToSystemTrayButton.addActionListener(e -> {
-            ExitDirectlyButton.setSelected(!ExitToSystemTrayButton.isSelected());
-        });
+        ExitDirectlyButton.addActionListener(e -> ExitToSystemTrayButton.setSelected(!ExitDirectlyButton.isSelected()));
+        ExitToSystemTrayButton.addActionListener(e -> ExitDirectlyButton.setSelected(!ExitToSystemTrayButton.isSelected()));
         ExitDirectlyButton.setSelected(true);
 
         //设置面板标题

@@ -159,17 +159,7 @@ public class CommandHandle {
 
     public static void createAndRunLinuxShellScript(String downloadFilePath, String openedPicturePath) throws IOException {
         // 提取下载文件的文件名（处理路径分隔符）
-        String fileName = new File(downloadFilePath).getName();
-
-        String shellContent =
-                "sleep 1\n"
-                        + "rm " + CURRENT_JAR_NAME + "\n"
-                        + "mv " + fileName + MainFileSuffix + " " + CURRENT_JAR_NAME + "\n"
-                        + "java -Dsun.java2d.opengl=true -DNUpdate=true -cp " + CURRENT_JAR_NAME + ":lib/* top.nserly.GUIStarter ";
-
-        if (openedPicturePath != null && !openedPicturePath.isBlank()) {
-            shellContent += openedPicturePath;
-        }
+        String shellContent = getShellContent(downloadFilePath, openedPicturePath);
 
         Path shellPath = Path.of("./replace.sh");
         Files.writeString(shellPath, shellContent);
@@ -181,6 +171,21 @@ public class CommandHandle {
         Runtime.getRuntime().exec(new String[]{"sh", "-c", "nohup sh ./replace.sh >/dev/null 2>&1 &"});
         log.info("Program Termination!");
         GUIStarter.exitAndRecord();
+    }
+
+    private static String getShellContent(String downloadFilePath, String openedPicturePath) {
+        String fileName = new File(downloadFilePath).getName();
+
+        String shellContent =
+                "sleep 1\n"
+                        + "rm " + CURRENT_JAR_NAME + "\n"
+                        + "mv " + fileName + MainFileSuffix + " " + CURRENT_JAR_NAME + "\n"
+                        + "java -Dsun.java2d.opengl=true -DNUpdate=true -cp " + CURRENT_JAR_NAME + ":lib/* top.nserly.GUIStarter ";
+
+        if (openedPicturePath != null && !openedPicturePath.isBlank()) {
+            shellContent += openedPicturePath;
+        }
+        return shellContent;
     }
 
     private static void addDeletedStatement(String file) {

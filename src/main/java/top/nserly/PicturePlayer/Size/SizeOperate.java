@@ -15,7 +15,7 @@ public class SizeOperate {
     //设置缩小时，引用
     public static final int Reduce = 1;
     //当前缩放比例
-    private double percent = 0;
+    private double percent;
     //最大缩放比例
     public final short MaxPercent = 1500;
     //最小缩放比例
@@ -115,7 +115,7 @@ public class SizeOperate {
 
 
     private double decide(double size) {
-        double result = 0;
+        double result;
         if (size > MaxPercent) {
             result = MaxPercent;
         } else {

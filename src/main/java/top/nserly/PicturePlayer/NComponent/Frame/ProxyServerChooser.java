@@ -15,7 +15,6 @@ import java.awt.*;
 import java.awt.event.*;
 import java.lang.reflect.Method;
 import java.util.ResourceBundle;
-import java.util.Vector;
 
 public class ProxyServerChooser extends JDialog {
     private final AddProxyServerFrame addProxyServer;
@@ -43,13 +42,9 @@ public class ProxyServerChooser extends JDialog {
         addProxyServer = new AddProxyServerFrame(this);
         refresh(false);
 
-        ChooseThisProxyServerButton.addActionListener(e -> {
-            choice();
-        });
+        ChooseThisProxyServerButton.addActionListener(e -> choice());
 
-        AddProxyServerButton.addActionListener(e -> {
-            add();
-        });
+        AddProxyServerButton.addActionListener(e -> add());
 
         EditProxyServerButton.addActionListener(e -> {
             //获取被选中的行号
@@ -68,13 +63,9 @@ public class ProxyServerChooser extends JDialog {
             }
         });
 
-        CancelProxyServerButton.addActionListener(e -> {
-            cancel();
-        });
+        CancelProxyServerButton.addActionListener(e -> cancel());
 
-        RefreshProxyServerButton.addActionListener(e -> {
-            refresh(true);
-        });
+        RefreshProxyServerButton.addActionListener(e -> refresh(true));
 
         // 点击 X 时调用 onCancel()
         setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
@@ -85,11 +76,7 @@ public class ProxyServerChooser extends JDialog {
         });
 
         // 遇到 ESCAPE 时调用 onCancel()
-        contentPane.registerKeyboardAction(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                cancel();
-            }
-        }, KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT);
+        contentPane.registerKeyboardAction(e -> cancel(), KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT);
     }
 
     /**
@@ -235,7 +222,7 @@ public class ProxyServerChooser extends JDialog {
      * @param rowIndex 表格中的行
      */
     public void delete(int[] rowIndex) {
-        int temp = 0;
+        int temp;
         for (int i = 0; i < rowIndex.length - 1; i++) {
             for (int j = 0; j < rowIndex.length - 1 - i; j++) {
                 if (rowIndex[j] < rowIndex[j + 1]) {
@@ -259,11 +246,11 @@ public class ProxyServerChooser extends JDialog {
      * @return 找到匹配内容的行索引，未找到返回-1
      */
     public int findRowIndexByColumnContent(int columnIndex, String content) {
-        Vector<Vector> dataVector = tableModel.getDataVector();
+        var dataVector = tableModel.getDataVector();
         if (columnIndex < 0 || dataVector.isEmpty()) return -1;
 
         for (int rowIdx = 0; rowIdx < dataVector.size(); rowIdx++) {
-            Vector<Object> rowData = dataVector.get(rowIdx);
+            var rowData = dataVector.get(rowIdx);
             // 检查列索引是否在有效范围内
             if (columnIndex >= rowData.size()) continue;
             Object cellValue = rowData.get(columnIndex);

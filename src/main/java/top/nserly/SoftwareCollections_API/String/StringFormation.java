@@ -104,7 +104,7 @@ public class StringFormation {
      * @param variable 被改变类的变量名（区分大小写）
      * @param value    改变后的值
      */
-    public static void revise(Class c, String variable, Object value) throws NoSuchFieldException, IllegalAccessException {//c为类，variable为被修改变量，value为修改的变量
+    public static void revise(Class<?> c, String variable, Object value) throws NoSuchFieldException, IllegalAccessException {//c为类，variable为被修改变量，value为修改的变量
         var f = c.getDeclaredField(variable);//获取属性列表
         f.setAccessible(true);//设置为可修改
         f.set(variable, value);//将变量对应名称里面的值设置为指定值
@@ -121,7 +121,6 @@ public class StringFormation {
      */
     public void removeAndAdd(HashMap<String, String> hashMap) {//revalued文本,value改变值
         if (hashMap != null)
-            information = (HashMap<String, String>) hashMap.clone();
+            information = new HashMap<>(hashMap);
     }
-
 }

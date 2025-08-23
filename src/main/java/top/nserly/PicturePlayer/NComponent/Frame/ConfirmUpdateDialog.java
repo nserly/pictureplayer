@@ -12,7 +12,9 @@ import javax.swing.*;
 import javax.swing.plaf.FontUIResource;
 import javax.swing.text.StyleContext;
 import java.awt.*;
-import java.awt.event.*;
+import java.awt.event.KeyEvent;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.lang.reflect.Method;
 import java.util.HashSet;
 import java.util.List;
@@ -51,17 +53,13 @@ public class ConfirmUpdateDialog extends JDialog {
         });
 
         // 遇到 ESCAPE 时调用 onCancel()
-        contentPane.registerKeyboardAction(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                onCancel();
-            }
-        }, KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT);
+        contentPane.registerKeyboardAction(e -> onCancel(), KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT);
 
         StringFormation formation = new StringFormation(Title.getText());
         formation.add("version", update.NewVersionName);
         formation.add("versionID", String.valueOf(update.NewVersionID));
         Title.setText(formation.getProcessingString());
-        List map = update.downloadDescribe();
+        List<?> map = update.downloadDescribe();
         if (!(map == null || map.isEmpty())) {
             textArea1.setText(FileContents.read((String) map.getFirst()));
         }

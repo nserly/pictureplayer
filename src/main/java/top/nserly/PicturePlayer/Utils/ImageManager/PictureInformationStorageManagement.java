@@ -16,13 +16,9 @@ import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 
 @Slf4j
-public class PictureInformationStorageManagement implements Serializable {
-    //Map(Key:图片路径 ; Value：List([0]:图片hashcode值 ; [1]:缓存的图片路径 ;[2]:缓存的图片hashcode值))
-    private final TreeMap<String, ArrayList<String>> treeMap;
-
+public record PictureInformationStorageManagement(TreeMap<String, ArrayList<String>> treeMap) implements Serializable {
     //图片缓存存储位置
     private static final String saveDir = "cache/PictureCache/";
     //保存图片缓存类型
@@ -30,19 +26,10 @@ public class PictureInformationStorageManagement implements Serializable {
     //保存图片缓存后缀
     private static final String FileSuffix = ".png";
 
-    //主体
-    public TreeMap<String, ArrayList<Object>> getTreeMap() {
-        return (TreeMap<String, ArrayList<Object>>) treeMap.clone();
-    }
 
     //初始化
     public PictureInformationStorageManagement() {
-        treeMap = new TreeMap<>();
-    }
-
-    //初始化
-    public PictureInformationStorageManagement(TreeMap<String, ArrayList<Object>> treeMap) {
-        this.treeMap = (TreeMap<String, ArrayList<String>>) treeMap.clone();
+        this(new TreeMap<>());
     }
 
     //获取特定图片缓存路径
@@ -91,7 +78,9 @@ public class PictureInformationStorageManagement implements Serializable {
             GetImageInformation.writeImage(bufferedImage, savePath.getPath(), saveType);
             pictureInformation.add(GetImageInformation.getHashcode(savePath));
             treeMap.put(originalPicturePath, pictureInformation);
-            bufferedImage.flush();
+            if (bufferedImage != null)
+                bufferedImage.flush();
+
         } catch (Exception e) {
             // 处理异常情况
             log.error(ExceptionHandler.getExceptionMessage(e));
@@ -106,9 +95,10 @@ public class PictureInformationStorageManagement implements Serializable {
         if (treeMap == null) return;
         String cachedPicture = treeMap.get(OriginalPicturePath).get(1);
         File cachedPictureFile = new File(cachedPicture);
-        if (cachedPictureFile.exists()) {
-            cachedPictureFile.delete();
-        }
+        if (cachedPictureFile.exists())
+            if (!cachedPictureFile.delete())
+                throw new RuntimeException("Deleting the image cache failed: " + cachedPicture);
+
         treeMap.remove(OriginalPicturePath);
     }
 
@@ -125,41 +115,32 @@ public class PictureInformationStorageManagement implements Serializable {
             return;
         }
 
-        // 创建一个线程池来并行处理文件删除任务
-        ExecutorService executorService = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
-
         // 使用 ConcurrentHashMap 来存储需要删除的缓存路径
         ConcurrentHashMap<String, ArrayList<String>> cacheToDelete = new ConcurrentHashMap<>();
 
-        // 遍历缓存树
-        for (Map.Entry<String, ArrayList<String>> entry : treeMap.entrySet()) {
-            final String originalPicturePath = entry.getKey();
-            final ArrayList<String> cache = entry.getValue();
-            final File currentProcessingFile = new File(originalPicturePath);
-            final File currentProcessingCachedFile = new File(cache.get(1));
+        // 创建一个线程池来并行处理文件删除任务
+        try (ExecutorService executorService = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors())) {
+            // 遍历缓存树
+            for (Map.Entry<String, ArrayList<String>> entry : treeMap.entrySet()) {
+                final String originalPicturePath = entry.getKey();
+                final ArrayList<String> cache = entry.getValue();
+                final File currentProcessingFile = new File(originalPicturePath);
+                final File currentProcessingCachedFile = new File(cache.get(1));
 
-            // 提交任务到线程池
-            executorService.submit(() -> {
-                if (!currentProcessingFile.exists() ||
-                        !currentProcessingCachedFile.exists() ||
-                        GetImageInformation.isOriginalJavaSupportedPictureType(originalPicturePath) ||
-                        !hashcodeEquals(originalPicturePath, cache.get(0)) ||
-                        !hashcodeEquals(currentProcessingCachedFile.getPath(), cache.get(2))) {
+                // 提交任务到线程池
+                executorService.submit(() -> {
+                    if (!currentProcessingFile.exists() ||
+                            !currentProcessingCachedFile.exists() ||
+                            GetImageInformation.isOriginalJavaSupportedPictureType(originalPicturePath) ||
+                            !hashcodeEquals(originalPicturePath, cache.get(0)) ||
+                            !hashcodeEquals(currentProcessingCachedFile.getPath(), cache.get(2))) {
 
-                    synchronized (cacheToDelete) {
-                        cacheToDelete.put(originalPicturePath, cache);
+                        synchronized (cacheToDelete) {
+                            cacheToDelete.put(originalPicturePath, cache);
+                        }
                     }
-                }
-            });
-        }
-
-        // 关闭线程池并等待所有任务完成
-        executorService.shutdown();
-        try {
-            executorService.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new RuntimeException("Interrupted while waiting for tasks to complete", e);
+                });
+            }
         }
 
         // 删除需要删除的缓存

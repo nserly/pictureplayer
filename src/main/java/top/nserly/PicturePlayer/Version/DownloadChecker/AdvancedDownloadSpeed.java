@@ -14,7 +14,6 @@ import java.awt.event.ActionEvent;
 import java.io.IOException;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
-import java.util.Map;
 
 public class AdvancedDownloadSpeed {
     private static final DecimalFormat decimalFormat = new DecimalFormat("#.##");
@@ -49,7 +48,7 @@ public class AdvancedDownloadSpeed {
         currentFileProgress.setStringPainted(true);
 
         DaemonUpdate = new Thread(() -> {
-            Map<String, ArrayList> map = downloadUpdate.download();
+            var map = downloadUpdate.download();
             if (map == null) {
                 DownloadUpdateFrame.downloadUpdateFrame.dispose();
                 return;

@@ -13,7 +13,7 @@ import java.util.Properties;
 
 public class SettingsInfoHandle {
     public static final Map<String, String> DefaultData = new HashMap<>();
-    public final HashMap<String, String> CurrentData = new HashMap<String, String>();
+    public final HashMap<String, String> CurrentData = new HashMap<>();
     private static final Logger logger = LoggerFactory.getLogger(SettingsInfoHandle.class);
 
     //初始化
@@ -61,7 +61,7 @@ public class SettingsInfoHandle {
     }
 
     //获取某键的对应布尔值
-    public static boolean getBoolean(String Description, Map map) {
+    public static boolean getBoolean(String Description, Map<?, ?> map) {
         if (map == null || !map.containsKey(Description)) {
             if (DefaultData.containsKey(Description)) return Boolean.parseBoolean(DefaultData.get(Description));
             return false;
@@ -70,12 +70,12 @@ public class SettingsInfoHandle {
     }
 
     //获取某键的对应浮点值
-    public static double getDouble(String Description, Map map) {
+    public static double getDouble(String Description, Map<?, ?> map) {
         return getDouble(Description, map, -65, 150);
     }
 
     //获取某键的对应int值
-    public static int getInt(String Description, Map map) {
+    public static int getInt(String Description, Map<?, ?> map) {
         if (map == null || !map.containsKey(Description)) {
             if (DefaultData.containsKey(Description)) return Integer.parseInt(DefaultData.get(Description));
             return -1;
@@ -84,7 +84,7 @@ public class SettingsInfoHandle {
     }
 
     //获取某建的对应布尔值
-    private static double getDouble(String Description, Map map, double min, double max) {
+    private static double getDouble(String Description, Map<?, ?> map, double min, double max) {
         if (min > max) {
             double temp = max;
             max = min;

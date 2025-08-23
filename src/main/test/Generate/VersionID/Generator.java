@@ -13,6 +13,9 @@ import java.util.HashSet;
 import java.util.TreeMap;
 
 public class Generator {
+    public static final String DownloadWebSite = "https://gitee.com/nserly-huaer/ImagePlayer/raw/master/artifacts/PicturePlayer_jar/";
+    public static final String DownloadLibWebSite = DownloadWebSite + "lib/";
+
     public static void main(String[] args) throws IOException {
         VersionID versionID = new VersionID();
         versionID.setStartMainFile("{MDWebsite}PicturePlayerRunner.exe");
@@ -31,8 +34,8 @@ public class Generator {
         HashMap<String, String> SpecialFields = new HashMap<>();
         SpecialFields.put("version", PicturePlayerVersion.getShorterVersion());
         SpecialFields.put("versionID", PicturePlayerVersion.getVersionID());
-        SpecialFields.put("MDWebsite", "https://gitee.com/nserly-huaer/ImagePlayer/raw/master/artifacts/PicturePlayer_jar/");
-        SpecialFields.put("LibWebsite", "https://gitee.com/nserly-huaer/ImagePlayer/raw/master/artifacts/PicturePlayer_jar/lib/");
+        SpecialFields.put("MDWebsite", DownloadWebSite);
+        SpecialFields.put("LibWebsite", DownloadLibWebSite);
 
 
         TreeMap<String, String> dependencies = getTreeMap();
@@ -45,23 +48,23 @@ public class Generator {
         System.out.println(versionIDJson);
         FileContents.write("artifacts/PicturePlayer_jar/VersionID.sum", versionIDJson);
 
-        File file = new File("artifacts/PicturePlayer_jar/PicturePlayer.jar");
-        if (file.exists()) {
-            File renameToFile = new File("artifacts/PicturePlayer_jar/" + SpecialFields.get("version") + ".jar");
-            if (renameToFile.exists()) {
-                if (!renameToFile.delete()) {
-                    throw new RuntimeException("Delete old File Error");
-                }
-            }
-            if (!file.renameTo(renameToFile)) {
-                throw new RuntimeException("Rename Main File Error");
-            }
-        }
+        changeMainFileName(SpecialFields);
     }
+
 
     private static TreeMap<String, String> getTreeMap() throws IOException {
         TreeMap<String, String> dependencies = new TreeMap<>();
-        final File libFile = new File("artifacts/PicturePlayer_jar/lib/");
+        HashSet<File> hashSet = verifierAndGetDependencySet(dependencies);
+
+        System.out.println("Dependency counts:" + dependencies.size());
+        if (hashSet.size() != dependencies.size()) {
+            throw new RuntimeException("Dependencies are incomplete!");
+        }
+        return dependencies;
+    }
+
+    private static HashSet<File> verifierAndGetDependencySet(TreeMap<String, String> dependencies) throws IOException {
+        File libFile = new File("artifacts/PicturePlayer_jar/lib/");
         JarVersionCleaner.cleanOldVersions(libFile.getPath(), false);
 
         HashSet<File> hashSet = JarFileRenamer.renameJarFile(libFile.getPath());
@@ -74,11 +77,21 @@ public class Generator {
                 dependencies.put(dependencyName.substring(0, dependencyName.lastIndexOf("-")), "{LibWebsite}" + dependencyName);
             }
         }
+        return hashSet;
+    }
 
-        System.out.println("Dependency counts:" + dependencies.size());
-        if (hashSet.size() != dependencies.size()) {
-            throw new RuntimeException("Dependencies are incomplete!");
+    private static void changeMainFileName(HashMap<String, String> SpecialFields) {
+        File file = new File("artifacts/PicturePlayer_jar/PicturePlayer.jar");
+        if (file.exists()) {
+            File renameToFile = new File("artifacts/PicturePlayer_jar/" + SpecialFields.get("version") + ".jar");
+            if (renameToFile.exists()) {
+                if (!renameToFile.delete()) {
+                    throw new RuntimeException("Delete old File Error");
+                }
+            }
+            if (!file.renameTo(renameToFile)) {
+                throw new RuntimeException("Rename Main File Error");
+            }
         }
-        return dependencies;
     }
 }

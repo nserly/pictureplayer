@@ -53,7 +53,7 @@ public class TCP_ServerSocket {
 
     {
         //获取ipv6地址
-        Enumeration<NetworkInterface> networkInterfaces = null;
+        Enumeration<NetworkInterface> networkInterfaces;
         try {
             networkInterfaces = NetworkInterface.getNetworkInterfaces();
         } catch (SocketException e) {
@@ -70,7 +70,7 @@ public class TCP_ServerSocket {
             }
         }
         //获取ipv4地址
-        InetAddress localhost = null;
+        InetAddress localhost;
         try {
             localhost = InetAddress.getLocalHost();
         } catch (UnknownHostException e) {
@@ -138,9 +138,7 @@ public class TCP_ServerSocket {
             return null;
         }
         Set<String> cache = new HashSet<>();
-        ClientSockets.forEach(e -> {
-            cache.add(e.getInetAddress().getHostAddress());
-        });
+        ClientSockets.forEach(e -> cache.add(e.getInetAddress().getHostAddress()));
 
         return cache;
     }

@@ -6,7 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import top.nserly.SoftwareCollections_API.String.GetString;
 
 import java.net.Socket;
-import java.util.concurrent.Callable;
+import java.util.concurrent.*;
 
 /**
  * Callable<Integer>中Integer为返回值，如果执行成功返回0，否则返回非0整数
@@ -27,31 +27,52 @@ public abstract class Interactions implements Callable<Integer> {
 
     @Override
     public final Integer call() throws Exception {
-        while (true) {
-            if (socket.isClosed() || tryCount >= 3) {
-                log.info("Socket is closed, interaction thread is terminating.(IP: {},Port: {})", socket.getInetAddress().getHostAddress(), socket.getPort());
-                return 1; // 返回1表示线程结束
-            }
-            sendMessage = GetString.getString(socket.getInputStream());
-            if (sendMessage == null || sendMessage.isBlank()) {
-                tryCount++;
-                if (ms == 0) {
+        ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+        ScheduledFuture<?> scheduledFuture = null;
+
+        try {
+            while (true) {
+                if (socket.isClosed() || tryCount >= 3) {
+                    log.info("Socket is closed, interaction thread is terminating. (IP: {}, Port: {})", socket.getInetAddress().getHostAddress(), socket.getPort());
+                    return 1; // 返回1表示线程结束
+                }
+
+                sendMessage = GetString.getString(socket.getInputStream());
+                if (sendMessage == null || sendMessage.isBlank()) {
+                    tryCount++;
+                    if (ms == 0) {
+                        ms = System.currentTimeMillis();
+                        continue;
+                    }
+                    long currentTime = System.currentTimeMillis();
+                    long elapsedTime = currentTime - ms;
+
+                    if (elapsedTime <= 10) {
+                        long sleepTime = 500 * (12 - elapsedTime) * (tryCount + 1);
+                        if (scheduledFuture != null && !scheduledFuture.isDone()) {
+                            scheduledFuture.cancel(false);
+                        }
+                        scheduledFuture = scheduler.schedule(() -> {
+                            // 继续执行
+                        }, sleepTime, TimeUnit.MILLISECONDS);
+                        ms = System.currentTimeMillis();
+                        continue;
+                    }
                     ms = System.currentTimeMillis();
                     continue;
                 }
-                long currentTime = System.currentTimeMillis();
-                long elapsedTime = currentTime - ms;
-                if (elapsedTime <= 10) {
-                    Thread.sleep(500 * (12 - elapsedTime) * (tryCount + 1)); // 如果间隔小于10毫秒，则休眠一段时间
+
+                tryCount = 0;
+                int internalResult = internalInformationProcessing();
+                if (internalResult == -1) {
+                    messageCall();
                 }
-                ms = System.currentTimeMillis();
-                continue;
             }
-            tryCount = 0;
-            int internalResult = internalInformationProcessing();
-            if (internalResult == -1) {
-                messageCall();
+        } finally {
+            if (scheduledFuture != null && !scheduledFuture.isDone()) {
+                scheduledFuture.cancel(false);
             }
+            scheduler.shutdown();
         }
     }
 

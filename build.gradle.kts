@@ -46,6 +46,10 @@ publishing {
 
 tasks.withType<JavaCompile> {
     options.encoding = "UTF-8"
+
+    options.compilerArgs.addAll(listOf("-Xlint:unchecked", "-Xlint:rawtypes"))
+    // 可选：将警告视为错误
+    // options.compilerArgs.add("-Werror")
 }
 
 tasks.withType<Javadoc> {
