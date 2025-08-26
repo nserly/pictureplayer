@@ -10,7 +10,10 @@ public class ExceptionHandler {
     public static String getExceptionMessage(Throwable e) {
         if (e == null) return null;
         StringBuilder stringBuilder = new StringBuilder();
+
         stringBuilder
+                .append((e.getMessage() != null && !e.getMessage().isBlank()) ? e.getMessage() : "No Exception Message!")
+                .append("\n")
                 .append(e.getClass().getName())
                 .append(":")
                 .append(e.getMessage())

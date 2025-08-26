@@ -206,7 +206,7 @@ public class TCP_ServerSocket {
         }
         if (closeConnectClient != null)
             try {
-                // 让其静默1分钟 (doge)
+                // 让其静默1秒钟 (doge)
                 Thread.sleep(1000);
             } catch (InterruptedException ignored) {
 

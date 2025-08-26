@@ -1,87 +1,65 @@
-﻿#include <windows.h>
-#include <iostream>
-#include <tchar.h>
-#include <vector>
-#include <shellapi.h>
-#include <shlwapi.h>
-#include <string>
-#include <io.h>
-#include <fcntl.h>
+﻿#include "PicturePlayerRunner.h"
 
-#pragma comment(lib, "shlwapi.lib")
 
-static std::vector<std::wstring> getRuntimeArgs();
-std::wstring getExeDirectory();
+/**
+ * 应用程序入口点
+ * @param hInstance 当前实例句柄
+ * @param hPrevInstance 以前的实例句柄（未使用）
+ * @param lpCmdLine 命令行参数
+ * @param nCmdShow 显示窗口的方式
+ * @return int 返回值
+ */
 
-void RedirectIOToConsole()
-{
-    // 获取标准输出句柄
-    HANDLE hStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
-    if (hStdOut != INVALID_HANDLE_VALUE) {
-        int fd = _open_osfhandle((intptr_t)hStdOut, _O_TEXT);
-        if (fd != -1) {
-            FILE* fp = _fdopen(fd, "w");
-            if (fp != nullptr) {
-                *stdout = *fp;
-                setvbuf(stdout, nullptr, _IONBF, 0);
-            }
-        }
-    }
+int WINAPI WinMain(
+    _In_ HINSTANCE hInstance,
+    _In_opt_ HINSTANCE hPrevInstance,
+    _In_ LPSTR lpCmdLine,
+    _In_ int nCmdShow
+) {
 
-    // 获取标准错误句柄
-    HANDLE hStdErr = GetStdHandle(STD_ERROR_HANDLE);
-    if (hStdErr != INVALID_HANDLE_VALUE) {
-        int fd = _open_osfhandle((intptr_t)hStdErr, _O_TEXT);
-        if (fd != -1) {
-            FILE* fp = _fdopen(fd, "w");
-            if (fp != nullptr) {
-                *stderr = *fp;
-                setvbuf(stderr, nullptr, _IONBF, 0);
-            }
-        }
-    }
-}
-
-// 检查文件是否存在
-bool FileExists(const std::wstring& filePath) {
-    return PathFileExistsW(filePath.c_str()) != 0;
-}
-
-// 获取文件内容
-std::string getFileContent(const std::wstring& filePath) {
-    FILE* file = nullptr;
-    if (_wfopen_s(&file, filePath.c_str(), L"rb") != 0 || !file) {
-        return {};
-    }
-    fseek(file, 0, SEEK_END);
-    long fileSize = ftell(file);
-    fseek(file, 0, SEEK_SET);
-    std::string content;
-    if (fileSize > 0) {
-        content.resize(fileSize);
-        fread(&content[0], 1, fileSize, file);
-    }
-    fclose(file);
-    return content;
-}
-
-// Application entry point
-int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
 	bool isConsole = false;
     // 获取当前可执行文件所在的目录
     std::wstring exeDir = getExeDirectory();
 
+
+    // 判断当前是否存在java运行环境
+    if (!isJavaInstalled()) {
+        JOptionPane::showError(L"If the Java runtime is not detected, install Java and configure the system PATH first.");
+        return 1;
+    }
+
+    // 判断PicturePlayer.jar是否存在
+    if (!FileExists(exeDir + L"\\PicturePlayer.jar")) {
+        JOptionPane::showError(L"Startup files cannot be found!\nPath: " + std::wstring(exeDir + L"\\PicturePlayer.jar"));
+        return 1;
+    }
+
+    // 检查并创建 vmoptions 文件
+    EnsureVmOptionsFile(exeDir);
+
     // 检查是否存在配置文件并读取配置
-    if (FileExists(exeDir + L"\\StartupConfig.properties") &&
-        getFileContent(exeDir + L"\\StartupConfig.properties").find("EnableConsole=true") != std::string::npos) {
-        isConsole = true;
+    if (FileExists(exeDir + L"\\StartupConfig.properties")) {
+        PropertiesReader propertiesReader = PropertiesReader(exeDir + L"\\StartupConfig.properties");
+        if (PropertiesReader::toLower(propertiesReader.get(L"EnableConsole")) == L"true") {
+            isConsole = true;
+        }
     }
 
     // 获取命令行参数
     std::vector<std::wstring> arguments = getRuntimeArgs();
 
+    // 读取 vmoptions 配置
+    std::vector<std::string> vmOptions = ReadVmOptions(exeDir);
+
     // 构建基础Java命令
-    std::wstring baseCommand = L"java -XX:+UseG1GC -Dsun.java2d.opengl=true -cp \"" + exeDir + L"\\PicturePlayer.jar;" +
+    std::wstring baseCommand = L"java ";
+
+    // 添加 vmoptions 参数
+    for (const auto& opt : vmOptions) {
+        baseCommand += std::wstring(opt.begin(), opt.end()) + L" ";
+    }
+
+    baseCommand += L"-cp \"" + exeDir + L"\\PicturePlayer.jar;" +
         exeDir + L"\\lib\\*\" top.nserly.GUIStarter";
 
     // 添加额外参数（跳过第一个参数即程序自身路径）
@@ -136,6 +114,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
     // 检查进程是否创建成功
     if (!success) {
+		JOptionPane::showError(L"Failed to start Java application. Please ensure that Java is installed and added to your system PATH.");
         return 1;
     }
 
@@ -147,42 +126,4 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     CloseHandle(pi.hThread);
 
     return 0;
-}
-
-// 获取宽字符命令行参数
-static std::vector<std::wstring> getRuntimeArgs() {
-    LPWSTR* argv = nullptr;
-    int argc = 0;
-
-    // 获取命令行参数
-    argv = CommandLineToArgvW(GetCommandLineW(), &argc);
-    std::vector<std::wstring> arguments;
-
-    if (argv == nullptr) {
-        return arguments;
-    }
-
-    // 存储所有参数
-    for (int i = 0; i < argc; i++) {
-        arguments.push_back(argv[i]);
-    }
-
-    // 释放资源
-    LocalFree(argv);
-
-    return arguments;
-}
-
-// 获取当前可执行文件所在目录
-std::wstring getExeDirectory() {
-    wchar_t exePath[MAX_PATH];
-    GetModuleFileNameW(NULL, exePath, MAX_PATH);
-
-    // 提取目录部分（移除文件名）
-    std::wstring path(exePath);
-    size_t pos = path.find_last_of(L"\\/");
-    if (pos != std::wstring::npos) {
-        return path.substr(0, pos);
-    }
-    return L"."; // 如果无法提取，返回当前目录
 }
