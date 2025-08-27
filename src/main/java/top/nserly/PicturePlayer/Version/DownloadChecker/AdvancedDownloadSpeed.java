@@ -72,8 +72,8 @@ public class AdvancedDownloadSpeed {
                 CommandHandle.moveFileToDirectory((String) map.get(downloadUpdate.MainFileWebSite).getFirst());
                 String osType = CommandHandle.detectOSType();
                 String OpenedPicturePath = null;
-                if (GUIStarter.main != null && GUIStarter.main.paintPicture != null && GUIStarter.main.paintPicture.imageCanvas != null) {
-                    OpenedPicturePath = GUIStarter.main.paintPicture.imageCanvas.getPath();
+                if (GUIStarter.main != null && GUIStarter.paintPicture != null && GUIStarter.paintPicture.imageCanvas != null) {
+                    OpenedPicturePath = GUIStarter.paintPicture.imageCanvas.getPath();
                 }
 
                 CommandHandle.executeOSSpecificCommands(osType, (String) map.get(website).getFirst(), OpenedPicturePath);

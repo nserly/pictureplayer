@@ -16,6 +16,10 @@ public class SystemMonitor {
     public static final String PROGRAM_START_TIME;
     //CPU核心数
     public static final int CPU_CORE_COUNT;
+    //物理核心数（实际物理CPU核心数量）
+    public static final int CPU_Physical_Core_Count;
+    //逻辑线程数（包含超线程技术的逻辑处理器数量）
+    public static final int CPU_Logical_Thread_Count;
     //操作系统名称
     public static final String OS_NAME;
     //java主目录
@@ -59,6 +63,8 @@ public class SystemMonitor {
         USER_NAME = System.getProperty("user.name");
         SystemInfo systemInfo = new SystemInfo();
         CentralProcessor processor = systemInfo.getHardware().getProcessor();
+        CPU_Physical_Core_Count = processor.getPhysicalProcessorCount();
+        CPU_Logical_Thread_Count = processor.getLogicalProcessorCount();
         CPU_NAME = processor.getProcessorIdentifier().getName();
     }
 

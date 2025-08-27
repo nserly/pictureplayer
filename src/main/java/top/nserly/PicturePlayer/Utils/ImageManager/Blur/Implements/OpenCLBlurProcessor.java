@@ -1,6 +1,6 @@
 package top.nserly.PicturePlayer.Utils.ImageManager.Blur.Implements;
 
-import lombok.Getter;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.jocl.*;
 import top.nserly.SoftwareCollections_API.Handler.Exception.ExceptionHandler;
@@ -16,12 +16,13 @@ import static org.jocl.CL.*;
 
 @Slf4j
 public class OpenCLBlurProcessor implements AutoCloseable {
-    public static final boolean isSupportedOpenCL = OpenCLSupportChecker.isOpenCLSupported();
+    private static boolean isSupportedOpenCL;
     // 同步控制
     private static final ReentrantLock staticLock = new ReentrantLock();
     private static final AtomicBoolean staticInitialized = new AtomicBoolean(false);
     private static final AtomicInteger instanceCount = new AtomicInteger(0);
     private static final AtomicBoolean staticInitializing = new AtomicBoolean(false);
+    private static final Thread GetIsSupportedOpenCL = new Thread(() -> isSupportedOpenCL = OpenCLSupportChecker.isOpenCLSupported());
     // 用于同步初始化过程
     private static final CountDownLatch initLatch = new CountDownLatch(1);
 
@@ -107,23 +108,37 @@ public class OpenCLBlurProcessor implements AutoCloseable {
     private int pixelCount = 0;
     private final AtomicBoolean isProcessing = new AtomicBoolean(false);
     private final ReentrantLock instanceLock = new ReentrantLock();
-    @Getter
-    private BufferedImage srcImage;
+
+    // 图像获取接口
+    @Setter
+    private BlurProcessorHandleAction handleAction;
+    static {
+        GetIsSupportedOpenCL.start();
+    }
+
+    public static boolean getIsSupportedOpenCL() {
+        try {
+            GetIsSupportedOpenCL.join();
+        } catch (InterruptedException ignored) {
+
+        }
+        return isSupportedOpenCL;
+    }
 
     /**
      * 构造函数 - 不带图像
      */
     public OpenCLBlurProcessor() {
-        this(null);
+        instanceCount.incrementAndGet();
+        log.debug("OpenCLBlurProcessor instance created. Total instances: {}", instanceCount.get());
     }
 
     /**
      * 构造函数 - 带图像
      */
     public OpenCLBlurProcessor(BufferedImage bufferedImage) {
-        this.srcImage = bufferedImage;
-        instanceCount.incrementAndGet();
-        log.debug("OpenCLBlurProcessor instance created. Total instances: {}", instanceCount.get());
+        this();
+        changeImage(bufferedImage);
     }
 
     /**
@@ -327,11 +342,10 @@ public class OpenCLBlurProcessor implements AutoCloseable {
                 return;
             }
 
-            this.srcImage = image;
             releaseInstanceResources();
 
             if (image != null) {
-                updateImageBuffer();
+                updateImageBuffer(image);
             }
 
             log.debug("Image changed successfully");
@@ -341,46 +355,50 @@ public class OpenCLBlurProcessor implements AutoCloseable {
     }
 
     /**
-     * 应用模糊效果
+     * 应用模糊效果：自动检查数据，不存在则通过接口获取
      */
     public BufferedImage applyBlur(int kernelSize) {
-        if (srcImage == null) {
-            log.error("Cannot apply blur: source image is null");
-            return null;
-        }
-
-        // 检查处理器是否已关闭，如果是则重新初始化
-        if (instanceClosed.get() || !staticInitialized.get()) {
-            log.info("Processor is closed or OpenCL not initialized, attempting to reinitialize...");
-            try {
-                init();
-                instanceClosed.set(false);
-            } catch (Exception e) {
-                log.error("Failed to reinitialize OpenCL: {}", e.getMessage());
-                return null;
-            }
-        }
-
-        if (kernelSize < 1 || kernelSize % 2 == 0) {
-            throw new IllegalArgumentException("Kernel size must be positive and odd");
-        }
-
-        if (!isProcessing.compareAndSet(false, true)) {
-            log.warn("OpenCL processing already in progress");
-            return null;
-        }
-
         instanceLock.lock();
         try {
-            // 检查图像尺寸是否变化
-            if (srcImage.getWidth() != currentWidth || srcImage.getHeight() != currentHeight) {
-                updateImageBuffer();
-            } else {
-                // 更新输入缓冲区数据（图像内容可能已更改）
-                updateInputBufferData();
+            // 检查处理器状态
+            if (instanceClosed.get() || !staticInitialized.get()) {
+                log.info("Processor is closed or OpenCL not initialized, attempting to reinitialize...");
+                try {
+                    init();
+                    instanceClosed.set(false);
+                } catch (Exception e) {
+                    log.error("Failed to reinitialize OpenCL: {}", e.getMessage());
+                    return null;
+                }
             }
 
-            // 计算 sigma 值（基于内核大小）
+            // 检查图像数据是否存在，不存在则通过接口获取
+            if (!hasValidImageData()) {
+                log.debug("No valid image data, trying to get from handle action");
+                if (handleAction == null) {
+                    log.error("BlurProcessorHandleAction is not set");
+                    return null;
+                }
+
+                BufferedImage image = handleAction.getSrcBlurBufferedImage();
+                if (image == null) {
+                    log.error("Failed to get image from handle action");
+                    return null;
+                }
+                changeImage(image);
+            }
+
+            // 验证内核大小
+            if (kernelSize < 1 || kernelSize % 2 == 0) {
+                throw new IllegalArgumentException("Kernel size must be positive and odd");
+            }
+
+            if (!isProcessing.compareAndSet(false, true)) {
+                log.warn("OpenCL processing already in progress");
+                return null;
+            }
+
+            // 计算 sigma 值
             float sigma = Math.max(1.0f, kernelSize / 3.0f);
 
             // 设置内核参数
@@ -414,15 +432,11 @@ public class OpenCLBlurProcessor implements AutoCloseable {
         } catch (CLException e) {
             log.error("OpenCL processing failed with error code: {}", e.getStatus());
             log.error(ExceptionHandler.getExceptionMessage(e));
-
-            // 发生错误时，标记实例为已关闭
             instanceClosed.set(true);
             return null;
         } catch (Exception e) {
             log.error("Unexpected error during OpenCL processing: {}", e.getMessage());
             log.error(ExceptionHandler.getExceptionMessage(e));
-
-            // 发生错误时，标记实例为已关闭
             instanceClosed.set(true);
             return null;
         } finally {
@@ -432,15 +446,24 @@ public class OpenCLBlurProcessor implements AutoCloseable {
     }
 
     /**
-     * 更新图像缓冲区
+     * 检查是否有有效的图像数据
      */
-    private void updateImageBuffer() {
+    private boolean hasValidImageData() {
+        return currentWidth > 0 && currentHeight > 0 &&
+                pixelCount == currentWidth * currentHeight &&
+                inputBuffer != null && outputBuffer != null;
+    }
+
+    /**
+     * 更新图像缓冲区（基于传入的图像）
+     */
+    private void updateImageBuffer(BufferedImage image) {
         // 释放旧缓冲区
         releaseInstanceResources();
 
-        // 更新尺寸
-        currentWidth = srcImage.getWidth();
-        currentHeight = srcImage.getHeight();
+        // 从传入的图像获取尺寸
+        currentWidth = image.getWidth();
+        currentHeight = image.getHeight();
         pixelCount = currentWidth * currentHeight;
 
         // 创建新缓冲区
@@ -450,18 +473,18 @@ public class OpenCLBlurProcessor implements AutoCloseable {
                 (long) pixelCount * Sizeof.cl_int, null, null);
 
         // 更新输入数据
-        updateInputBufferData();
+        updateInputBufferData(image);
 
         log.debug("Image buffer updated for size: {}x{}", currentWidth, currentHeight);
     }
 
     /**
-     * 更新输入缓冲区数据
+     * 更新输入缓冲区数据（基于传入的图像）
      */
-    private void updateInputBufferData() {
-        if (inputBuffer == null || pixelCount == 0) return;
+    private void updateInputBufferData(BufferedImage image) {
+        if (inputBuffer == null || pixelCount == 0 || image == null) return;
 
-        int[] pixels = srcImage.getRGB(0, 0, currentWidth, currentHeight, null, 0, currentWidth);
+        int[] pixels = image.getRGB(0, 0, currentWidth, currentHeight, null, 0, currentWidth);
         IntBuffer pixelBuffer = IntBuffer.wrap(pixels);
         clEnqueueWriteBuffer(clCommandQueue, inputBuffer, CL_TRUE, 0,
                 (long) pixelCount * Sizeof.cl_int, Pointer.to(pixelBuffer),
@@ -504,8 +527,6 @@ public class OpenCLBlurProcessor implements AutoCloseable {
             if (instanceClosed.get()) {
                 return;
             }
-
-            srcImage = null;
 
             releaseInstanceResources();
             instanceClosed.set(true);

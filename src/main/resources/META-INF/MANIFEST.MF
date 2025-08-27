@@ -1,24 +1,3 @@
 Manifest-Version: 1.0
 Main-Class: top.nserly.GUIStarter
-Class-Path: kotlin-reflect-2.0.21.jar imageio-tiff-3.12.0.jar groovy-nio
- -3.0.24.jar kotlin-stdlib-jdk7-2.0.21.jar log4j-api-2.25.1.jar groovy-t
- emplates-3.0.24.jar kotlin-stdlib-2.0.21.jar groovy-test-3.0.24.jar for
- ms_rt-142.1.jar okio-jvm-3.6.0.jar groovy-sql-3.0.24.jar imageio-core-3
- .12.0.jar common-image-3.12.0.jar groovy-3.0.24.jar groovy-json-3.0.24.
- jar groovy-ant-3.0.24.jar imageio-metadata-3.12.0.jar common-lang-3.12.
- 0.jar gradle-kotlin-dsl-shared-runtime-8.14.3.jar kotlin-stdlib-2.0.21.
- jar moshi-1.12.0.jar gradle-core-api-8.14.3.jar log4j-core-2.25.1.jar e
- rror_prone_annotations-2.38.0.jar gradle-installation-beacon-8.14.3.jar
-  common-io-3.12.0.jar groovy-xml-3.0.24.jar moshi-kotlin-1.12.0.jar ima
- geio-webp-3.12.0.jar gradle-core-kotlin-extensions-8.14.3.jar groovy-da
- teutil-3.0.24.jar jna-platform-5.17.0.jar jsvg-2.0.0.jar log4j-slf4j2-i
- mpl-2.25.1.jar gradle-api-8.14.3.jar flatlaf-3.6.1.jar groovy-datetime-
- 3.0.24.jar groovy-console-3.0.24.jar gradle-kotlin-dsl-tooling-models-8
- .14.3.jar thumbnailator-0.4.20.jar groovy-groovydoc-3.0.24.jar oshi-cor
- e-6.8.2.jar gradle-kotlin-dsl-extensions-8.14.3.jar groovy-astbuilder-3
- .0.24.jar javaparser-core-3.17.0.jar slf4j-api-2.0.17.jar okhttp-4.12.0
- .jar jna-5.17.0.jar imageio-jpeg-3.12.0.jar flatlaf-extras-3.6.1.jar ko
- tlin-stdlib-jdk8-2.0.21.jar gson-2.13.1.jar annotations-13.0.jar gradle
- -versions-plugin-0.52.0.jar kotlin-reflect-2.0.21.jar gradle-core-8.14.
- 3.jar gradle-kotlin-dsl-8.14.3.jar
 

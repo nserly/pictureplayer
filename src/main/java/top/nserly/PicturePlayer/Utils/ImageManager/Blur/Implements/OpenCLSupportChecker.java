@@ -3,12 +3,14 @@ package top.nserly.PicturePlayer.Utils.ImageManager.Blur.Implements;
 import lombok.extern.slf4j.Slf4j;
 import org.jocl.*;
 
+import java.util.Arrays;
+
 import static org.jocl.CL.*;
 
 @Slf4j
 public class OpenCLSupportChecker {
 
-    private static final int BUFFER_SIZE = 1024;
+    private static final int BUFFER_SIZE = 64;
     private static final byte[] buffer = new byte[BUFFER_SIZE];
 
     /**
@@ -92,16 +94,24 @@ public class OpenCLSupportChecker {
         }
     }
 
+    private static void clearBuffer() {
+        Arrays.fill(buffer, (byte) 0);
+    }
+
     private static void appendPlatformInfo(StringBuilder info, cl_platform_id platform) {
         clGetPlatformInfo(platform, CL_PLATFORM_NAME, BUFFER_SIZE, Pointer.to(buffer), null);
         info.append("  Name: ").append(new String(buffer).trim()).append("\n");
+        clearBuffer();
 
         clGetPlatformInfo(platform, CL_PLATFORM_VENDOR, BUFFER_SIZE, Pointer.to(buffer), null);
         info.append("  Vendor: ").append(new String(buffer).trim()).append("\n");
+        clearBuffer();
 
         clGetPlatformInfo(platform, CL_PLATFORM_VERSION, BUFFER_SIZE, Pointer.to(buffer), null);
         info.append("  Version: ").append(new String(buffer).trim()).append("\n");
+        clearBuffer();
     }
+
 
     private static void appendDeviceInfo(StringBuilder info, cl_platform_id platform, long deviceType, String deviceTypeName) {
         int[] numDevices = new int[1];
@@ -115,6 +125,7 @@ public class OpenCLSupportChecker {
                 for (cl_device_id device : devices) {
                     clGetDeviceInfo(device, CL_DEVICE_NAME, BUFFER_SIZE, Pointer.to(buffer), null);
                     info.append("    ").append(new String(buffer).trim()).append("\n");
+                    clearBuffer();
                 }
             }
         } catch (CLException e) {

@@ -47,7 +47,7 @@ public class WindowsAppMutex {
                 return "127.0.0.1".equals(hostAddress) || "::1".equals(hostAddress);
             });
 
-            // 每60秒检查一次
+            // 每30秒检查一次
             try (ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor()) {
                 executor.scheduleAtFixedRate(() -> tcpServerSocket.checkConnectState(), 0, 30, TimeUnit.SECONDS);
             }

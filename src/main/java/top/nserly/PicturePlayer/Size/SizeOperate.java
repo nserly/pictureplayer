@@ -94,11 +94,11 @@ public class SizeOperate {
     }
 
     //传入窗体信息（此类无法直接获取窗体信息）
-    public synchronized void incomeWindowDimension(Dimension window) {
+    public void incomeWindowDimension(Dimension window) {
         if (window != null) {
             this.Component = window;
             FittestPercent = getPictureOptimalSize();
-            if (PictureSize == null && imageCanvas != null)
+            if (PictureSize == null && imageCanvas != null && window.getWidth() != 0 && window.getHeight() != 0)
                 try {
                     PictureSize = new Dimension(imageCanvas.getImageWidth(), imageCanvas.getImageHeight());
                 } catch (Exception e) {

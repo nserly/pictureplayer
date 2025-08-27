@@ -8,9 +8,11 @@ import top.nserly.PicturePlayer.Settings.SettingsInfoHandle;
 import top.nserly.PicturePlayer.Size.OperatingCoordinate;
 import top.nserly.PicturePlayer.Size.SizeOperate;
 import top.nserly.PicturePlayer.Utils.ImageManager.Blur.Implements.BlurKernelSizeCompute;
+import top.nserly.PicturePlayer.Utils.ImageManager.Blur.Implements.BlurProcessorHandleAction;
 import top.nserly.PicturePlayer.Utils.ImageManager.Blur.Implements.OpenCLBlurProcessor;
 import top.nserly.PicturePlayer.Utils.ImageManager.ImageRotationHelper;
 import top.nserly.PicturePlayer.Utils.ImageManager.Info.GetImageInformation;
+import top.nserly.PicturePlayer.Utils.ImageManager.Info.ImageHandle;
 import top.nserly.PicturePlayer.Utils.ImageManager.PictureInformationStorageManagement;
 import top.nserly.PicturePlayer.Version.DownloadChecker.AdvancedDownloadSpeed;
 import top.nserly.SoftwareCollections_API.Handler.Exception.ExceptionHandler;
@@ -133,18 +135,17 @@ public class PaintPicturePanel extends JPanel {
             MainPanel.add(imageCanvas, BorderLayout.CENTER);
             add(MainPanel, BorderLayout.CENTER);
 
-            if (isEnableHardwareAcceleration && OpenCLBlurProcessor.isSupportedOpenCL) {
+            if (isEnableHardwareAcceleration && OpenCLBlurProcessor.getIsSupportedOpenCL()) {
                 OpenCLBlurProcessor.init();
             }
+
+            validate();
         });
         init.setPriority(Thread.MAX_PRIORITY);
         init.start();
         new Thread(() -> {
-            try {
-                init.join();
-            } catch (InterruptedException ignored) {
-
-            }
+            init_Listener();
+            waitInitComplete();
 
             PercentSlider.setMaximum(sizeOperate.MaxPercent);
             PercentSlider.setMinimum(sizeOperate.MinPercent);
@@ -153,11 +154,16 @@ public class PaintPicturePanel extends JPanel {
             percentLabel.set((int) sizeOperate.getPercent());
             //设置图片缩放滑动条
             PercentSlider.setValue((int) sizeOperate.getPercent());
-            init_Listener();
         }).start();
     }
 
+    public void waitInitComplete() {
+        GUIStarter.waitThreadsComplete(init);
+    }
+
     public void fitComponent() {
+        waitInitComplete();
+
         sizeOperate.incomeWindowDimension(imageCanvas.getSize());
         sizeOperate.setPercent(sizeOperate.getPictureOptimalSize());
         sizeOperate.update(false);
@@ -186,7 +192,7 @@ public class PaintPicturePanel extends JPanel {
     }
 
     private void init_Listener() {
-        FullScreen.addActionListener(e -> GUIStarter.main.paintPicture.imageCanvas.setFullScreen(true));
+        FullScreen.addActionListener(e -> GUIStarter.paintPicture.imageCanvas.setFullScreen(true));
         //点击时间
         AtomicLong ClickedTime = new AtomicLong();
         //规定时间内点击次数
@@ -247,7 +253,9 @@ public class PaintPicturePanel extends JPanel {
             public void mouseClicked(MouseEvent e) {
                 if (imageCanvas.getPath() != null && !imageCanvas.getPath().equals(pictureInformationViewer.getPicturePath())) {
                     try {
-                        pictureInformationViewer.update(GetImageInformation.getImageHandle(new File(imageCanvas.getPath())));
+                        ImageHandle imageHandle = GetImageInformation.getImageHandle(new File(imageCanvas.getPath()));
+                        pictureInformationViewer.update(imageHandle);
+                        imageHandle.close();
                     } catch (IOException ex) {
                         log.error(ExceptionHandler.getExceptionMessage(ex));
                     }
@@ -364,24 +372,24 @@ public class PaintPicturePanel extends JPanel {
     //改变图片路径
     public void changePicturePath(String path) {
         log.info("Opened:\"{}\"", path);
-        try {
-            init.join();
-        } catch (InterruptedException ignored) {
+        AtomicReference<String> hashCode = new AtomicReference<>();
+        AtomicReference<BufferedImage> image = new AtomicReference<>();
 
-        }
-        validate();
+        Thread getHashCodeThread = new Thread(() -> hashCode.set(GetImageInformation.getHashcode(new File(path))));
+        Thread getBufferedImage = new Thread(() -> image.set(GetImageInformation.getImage(path)));
+        getHashCodeThread.start();
+        getBufferedImage.start();
+
+        GUIStarter.waitThreadsComplete(getHashCodeThread, getBufferedImage, init);
+
         sizeOperate.incomeWindowDimension(imageCanvas.getSize());
-        imageCanvas.changePicturePath(path);
+        imageCanvas.changePicturePath(image.get(), path, hashCode.get());
     }
 
     //改变图片路径
     public void changePicturePath(BufferedImage bufferedImage, String path) {
         log.info("Opened:\"{}\"", path);
-        try {
-            init.join();
-        } catch (InterruptedException ignored) {
-
-        }
+        waitInitComplete();
         validate();
         sizeOperate.incomeWindowDimension(imageCanvas.getSize());
         imageCanvas.changePicturePath(bufferedImage, path, GetImageInformation.getHashcode(new File(path)));
@@ -564,8 +572,6 @@ public class PaintPicturePanel extends JPanel {
         private BufferedImage image;
         //模糊化类
         OpenCLBlurProcessor openCLBlurProcessor;
-        //原始模糊BufferedImage
-        private BufferedImage srcBlurBufferedImage;
         //当前组件信息
         private Dimension NewWindow;
         //上次组件信息
@@ -589,33 +595,39 @@ public class PaintPicturePanel extends JPanel {
         @Getter
         private boolean isLowOccupancyMode = false;
 
+        private final BlurProcessorHandleAction blurProcessorHandleAction;
+
         //构造方法初始化（用于初始化类）
         public ImageCanvas() {
             setDoubleBuffered(true);
             //初始化监听器
             new Thread(this::init_listener).start();
+            blurProcessorHandleAction = () -> {
+                if (image != null) {
+                    BufferedImage bufferedImage = GetImageInformation.castToTYPEINTRGB(image);
+                    bufferedImage.flush();
+                    return bufferedImage;
+                }
+                return null;
+            };
             new Thread(() -> {
                 isEnableHardware = isEnableHardwareAcceleration;
-                if (isEnableHardware) openCLBlurProcessor = new OpenCLBlurProcessor();
+                if (isEnableHardware) {
+                    openCLBlurProcessor = new OpenCLBlurProcessor();
+                    openCLBlurProcessor.setHandleAction(blurProcessorHandleAction);
+                }
                 timer = new Timer(400, e -> {
+                    if (BlurBufferedImage != null) {
+                        BlurBufferedImage.flush();
+                        BlurBufferedImage.getGraphics().dispose();
+                        BlurBufferedImage = null;
+                    }
                     if (!isEnableHardware) return;
                     ((Timer) e.getSource()).stop(); // 停止计时器
                     new Thread(() -> {
-                        if (image != null && openCLBlurProcessor != null && openCLBlurProcessor.getSrcImage() != null) {
-                            if (BlurBufferedImage != null) {
-                                BlurBufferedImage.flush();
-                                BlurBufferedImage.getGraphics().dispose();
-                                BlurBufferedImage = null;
-                            }
-
-                            if (srcBlurBufferedImage == null) {
-                                srcBlurBufferedImage = GetImageInformation.castToTYPEINTRGB(image);
-                                openCLBlurProcessor.close();
-                                openCLBlurProcessor = new OpenCLBlurProcessor(srcBlurBufferedImage);
-                            }
-
+                        if (image != null && openCLBlurProcessor != null) {
                             int KernelSize = BlurKernelSizeCompute.calculateKernelSize(
-                                    openCLBlurProcessor.getSrcImage(), sizeOperate.getPercent());
+                                    image, sizeOperate.getPercent());
                             BlurBufferedImage = openCLBlurProcessor.applyBlur(KernelSize);
                             isNeedBlurToView = true;
                             repaint();
@@ -648,25 +660,28 @@ public class PaintPicturePanel extends JPanel {
                 OpenCLBlurProcessor.closeBlurProcessor();
                 if (openCLBlurProcessor != null)
                     openCLBlurProcessor.close();
-                openCLBlurProcessor = null;
                 if (image != null)
                     image.flush();
                 if (BlurBufferedImage != null)
                     BlurBufferedImage.flush();
-                if (srcBlurBufferedImage != null)
-                    srcBlurBufferedImage.flush();
 
-                image = srcBlurBufferedImage = BlurBufferedImage = null;
+                image = BlurBufferedImage = null;
 
-                GUIStarter.main.reviewPictureList(new ArrayList<>());
+                GUIStarter.main.reviewPictureList(null);
             } else {
                 if (path == null) return;
                 image = GetImageInformation.getImage(
                         pictureInformationStorageManagement.getCachedPicturePath(path, picture_hashcode));
+                isEnableHardware = isEnableHardwareAcceleration;
                 if (isEnableHardware) {
                     new Thread(() -> {
-                        srcBlurBufferedImage = GetImageInformation.castToTYPEINTRGB(image);
-                        openCLBlurProcessor = new OpenCLBlurProcessor(srcBlurBufferedImage);
+                        BufferedImage srcBlurBufferedImage = GetImageInformation.castToTYPEINTRGB(image);
+                        if (openCLBlurProcessor == null) {
+                            openCLBlurProcessor = new OpenCLBlurProcessor();
+                            openCLBlurProcessor.setHandleAction(blurProcessorHandleAction);
+                        }
+                        openCLBlurProcessor.changeImage(srcBlurBufferedImage);
+                        srcBlurBufferedImage.flush();
                         GUIStarter.main.reviewPictureList(CurrentPathOfPicture);
                     }).start();
                 }
@@ -728,10 +743,12 @@ public class PaintPicturePanel extends JPanel {
             if (path.startsWith("\"") && path.endsWith("\"")) {
                 path = path.substring(1, path.length() - 1);
             }
+            String finalPath = path;
 
             timer.stop();
             boolean isRepeat = path.equals(this.path) && picture_hashcode.equals(this.picture_hashcode);
 
+            isEnableHardware = isEnableHardwareAcceleration;
             if (!isRepeat) {
                 this.path = path;
                 this.picture_hashcode = picture_hashcode;
@@ -739,13 +756,10 @@ public class PaintPicturePanel extends JPanel {
                 NewWindow = LastWindow = null;
                 if (this.image != null) this.image.flush();
                 if (BlurBufferedImage != null) BlurBufferedImage.flush();
-                if (srcBlurBufferedImage != null) srcBlurBufferedImage.flush();
-                BlurBufferedImage = srcBlurBufferedImage = null;
+                BlurBufferedImage = null;
             }
             this.image = image;
             if (sizeOperate != null) sizeOperate.changeCanvas(this, !isRepeat);
-
-            String finalPath = path;
 
             if (isLowOccupancyMode)
                 isLowOccupancyMode = false;
@@ -758,11 +772,24 @@ public class PaintPicturePanel extends JPanel {
                 //若这两个文件父目录不相同
                 //则加载当前图片路径下所有图片
                 loadPictureInTheParent(finalPath);
+
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+
+                System.gc();
             }).start();
             if (isEnableHardware && !isRepeat) {
                 new Thread(() -> {
-                    srcBlurBufferedImage = GetImageInformation.castToTYPEINTRGB(image);
-                    openCLBlurProcessor = new OpenCLBlurProcessor(srcBlurBufferedImage);
+                    BufferedImage srcBlurBufferedImage = GetImageInformation.castToTYPEINTRGB(image);
+                    if (openCLBlurProcessor == null) {
+                        openCLBlurProcessor = new OpenCLBlurProcessor();
+                        openCLBlurProcessor.setHandleAction(blurProcessorHandleAction);
+                    }
+                    openCLBlurProcessor.changeImage(srcBlurBufferedImage);
+                    srcBlurBufferedImage.flush();
                     sizeOperate.update(false);
                 }).start();
             }
@@ -787,7 +814,7 @@ public class PaintPicturePanel extends JPanel {
                 openCLBlurProcessor.close();
             OpenCLBlurProcessor.closeBlurProcessor();
             openCLBlurProcessor = null;
-            image = srcBlurBufferedImage = BlurBufferedImage = null;
+            image = BlurBufferedImage = null;
             path = lastPath = picture_hashcode = null;
             LastPercent = lastWidth = lastHeight = X = Y = mouseX = mouseY = lastRotationDegrees = RotationDegrees = 0;
             NewWindow = LastWindow = null;
@@ -889,6 +916,11 @@ public class PaintPicturePanel extends JPanel {
                 graphics2D.drawImage(BlurBufferedImage, (int) X, (int) Y, (int) lastWidth, (int) lastHeight, null);
                 isNeedBlurToView = false;
                 g.dispose();
+
+                BlurBufferedImage.getGraphics().dispose();
+                BlurBufferedImage.flush();
+                BlurBufferedImage = null;
+
                 return;
             }
             //如果转动角度为0或180度，请无使用此值，此值为旋转其他度数的设计
