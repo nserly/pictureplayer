@@ -3,6 +3,7 @@ package top.nserly.PicturePlayer.Utils.ImageManager.Blur.Implements;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.jocl.*;
+import top.nserly.SoftwareCollections_API.FileHandle.FileContents;
 import top.nserly.SoftwareCollections_API.Handler.Exception.ExceptionHandler;
 
 import java.awt.image.BufferedImage;
@@ -17,12 +18,21 @@ import static org.jocl.CL.*;
 @Slf4j
 public class OpenCLBlurProcessor implements AutoCloseable {
     private static boolean isSupportedOpenCL;
+    private static String SelectedDevice;
+    private static int DeviceCount;
     // 同步控制
     private static final ReentrantLock staticLock = new ReentrantLock();
+    private static final ReentrantLock DeviceSelectorLock = new ReentrantLock();
+    private static final Thread GetIsSupportedOpenCL = new Thread(() -> {
+        isSupportedOpenCL = OpenCLSupportChecker.isOpenCLSupported();
+        DeviceCount = OpenCLSupportChecker.getSupported_GPU_Device() > 0 ?
+                OpenCLSupportChecker.getSupported_GPU_Device() :
+                OpenCLSupportChecker.getSupported_CPU_Device();
+    });
     private static final AtomicBoolean staticInitialized = new AtomicBoolean(false);
     private static final AtomicInteger instanceCount = new AtomicInteger(0);
     private static final AtomicBoolean staticInitializing = new AtomicBoolean(false);
-    private static final Thread GetIsSupportedOpenCL = new Thread(() -> isSupportedOpenCL = OpenCLSupportChecker.isOpenCLSupported());
+    private static int SelectDeviceIndex;
     // 用于同步初始化过程
     private static final CountDownLatch initLatch = new CountDownLatch(1);
 
@@ -30,69 +40,7 @@ public class OpenCLBlurProcessor implements AutoCloseable {
     private final AtomicBoolean instanceClosed = new AtomicBoolean(false);
 
     // 优化后的 OpenCL 内核代码
-    private static final String KERNEL_SOURCE = """
-            __kernel void gaussianBlur(
-                __global const int* input,
-                __global int* output,
-                const int width,
-                const int height,
-                const int kernelSize,
-                const float sigma
-            ) {
-                int x = get_global_id(0);
-                int y = get_global_id(1);
-            
-                if (x >= width || y >= height) {
-                    return;
-                }
-            
-                int radius = kernelSize / 2;
-                float4 sum = (float4)(0.0f, 0.0f, 0.0f, 0.0f);
-                float weightSum = 0.0f;
-            
-                // 预计算高斯核
-                for (int ky = -radius; ky <= radius; ky++) {
-                    for (int kx = -radius; kx <= radius; kx++) {
-                        int nx = clamp(x + kx, 0, width - 1);
-                        int ny = clamp(y + ky, 0, height - 1);
-                        int pixelIdx = ny * width + nx;
-                        int pixel = input[pixelIdx];
-            
-                        // 提取颜色分量并归一化
-                        float4 color;
-                        color.w = ((pixel >> 24) & 0xFF) / 255.0f;
-                        color.x = ((pixel >> 16) & 0xFF) / 255.0f;
-                        color.y = ((pixel >> 8) & 0xFF) / 255.0f;
-                        color.z = (pixel & 0xFF) / 255.0f;
-            
-                        // 处理完全透明像素
-                        if (color.w < 0.001f) {
-                            color = (float4)(0.0f, 0.0f, 0.0f, 0.0f);
-                        }
-            
-                        // 计算高斯权重
-                        float distanceSq = (float)(kx * kx + ky * ky);
-                        float weight = exp(-distanceSq / (2.0f * sigma * sigma));
-            
-                        // 累积加权颜色
-                        sum += color * weight;
-                        weightSum += weight;
-                    }
-                }
-            
-                // 归一化并转换回整数
-                if (weightSum > 0.0f) {
-                    sum /= weightSum;
-                }
-            
-                int finalA = clamp((int)(sum.w * 255.0f), 0, 255);
-                int finalR = clamp((int)(sum.x * 255.0f), 0, 255);
-                int finalG = clamp((int)(sum.y * 255.0f), 0, 255);
-                int finalB = clamp((int)(sum.z * 255.0f), 0, 255);
-            
-                output[y * width + x] = (finalA << 24) | (finalR << 16) | (finalG << 8) | finalB;
-            }
-            """;
+    private static final String KERNEL_SOURCE = FileContents.read(OpenCLBlurProcessor.class.getResource("AdvancedImageBlur.c"));
 
     // 静态共享资源
     private static cl_context clContext = null;
@@ -112,6 +60,7 @@ public class OpenCLBlurProcessor implements AutoCloseable {
     // 图像获取接口
     @Setter
     private BlurProcessorHandleAction handleAction;
+
     static {
         GetIsSupportedOpenCL.start();
     }
@@ -124,6 +73,55 @@ public class OpenCLBlurProcessor implements AutoCloseable {
         }
         return isSupportedOpenCL;
     }
+
+    public static int getDeviceCount() {
+        try {
+            GetIsSupportedOpenCL.join();
+        } catch (InterruptedException ignored) {
+
+        }
+        return DeviceCount;
+    }
+
+    public static synchronized boolean setSelectDeviceIndex(int index) {
+        DeviceSelectorLock.lock();
+        try {
+            index = Math.min(getDeviceCount() - 1, index) > -1 ? index : 0;
+            if (index == SelectDeviceIndex) return true;
+            SelectDeviceIndex = index;
+            closeBlurProcessor();
+            init();
+        } finally {
+            DeviceSelectorLock.unlock();
+        }
+        return SelectedDevice != null && !SelectedDevice.isEmpty();
+    }
+
+    public static int getSelectDeviceIndex() {
+        DeviceSelectorLock.lock();
+        try {
+            return SelectDeviceIndex;
+        } finally {
+            DeviceSelectorLock.unlock();
+        }
+    }
+
+
+    public static String getSelectedDevice() {
+        staticLock.lock();
+        try {
+            if (!staticInitialized.get()) {
+                initLatch.await();
+            }
+            return SelectedDevice;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException("Interrupted while waiting for OpenCL initialization", e);
+        } finally {
+            staticLock.unlock();
+        }
+    }
+
 
     /**
      * 构造函数 - 不带图像
@@ -150,7 +148,13 @@ public class OpenCLBlurProcessor implements AutoCloseable {
             return;
         }
 
-        if (!OpenCLSupportChecker.isOpenCLSupported()) {
+        try {
+            GetIsSupportedOpenCL.join();
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+
+        if (!isSupportedOpenCL) {
             log.error("OpenCL is not supported on this system");
             return;
         }
@@ -203,7 +207,8 @@ public class OpenCLBlurProcessor implements AutoCloseable {
 
             cl_device_id[] devices = new cl_device_id[numDevices[0]];
             clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, devices.length, devices, null);
-            cl_device_id clDevice = devices[0];
+            SelectDeviceIndex = SelectDeviceIndex < devices.length ? SelectDeviceIndex : 0;
+            cl_device_id clDevice = devices[SelectDeviceIndex];
 
             // 创建上下文
             cl_context_properties contextProperties = new cl_context_properties();
@@ -236,7 +241,8 @@ public class OpenCLBlurProcessor implements AutoCloseable {
             blurKernel = clCreateKernel(clProgram, "gaussianBlur", null);
 
             staticInitialized.set(true);
-            log.info("OpenCL static resources initialized successfully with device: {}", getDeviceName(clDevice));
+            SelectedDevice = getDeviceName(clDevice);
+            log.info("OpenCL static resources initialized successfully with device: {}", SelectedDevice);
 
         } catch (Exception e) {
             staticInitializing.set(false);
@@ -276,6 +282,7 @@ public class OpenCLBlurProcessor implements AutoCloseable {
      * 释放静态资源
      */
     private static void releaseStaticResources() {
+        SelectedDevice = null;
         if (blurKernel != null) {
             try {
                 clReleaseKernel(blurKernel);

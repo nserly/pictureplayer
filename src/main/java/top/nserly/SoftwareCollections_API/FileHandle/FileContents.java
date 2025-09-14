@@ -4,25 +4,34 @@ import lombok.extern.slf4j.Slf4j;
 import top.nserly.SoftwareCollections_API.Handler.Exception.ExceptionHandler;
 
 import java.io.*;
+import java.net.MalformedURLException;
+import java.net.URL;
 
 @Slf4j
 public class FileContents {
 
     public static String read(String path) {
-        StringBuilder stringBuilder = new StringBuilder();
-        char[] buffer = new char[102400];
-        try (BufferedReader bufferedReader = new BufferedReader(new FileReader(path))) {
-            while (true) {
-                int index = bufferedReader.read(buffer);
-                if (index == -1)
-                    return stringBuilder.toString();
-                stringBuilder.append(new String(buffer, 0, index));
+        try {
+            return read(new File(path).toURI().toURL());
+        } catch (MalformedURLException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static String read(URL url){
+        StringBuilder content = new StringBuilder();
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(url.openStream()))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                content.append(line).append(System.lineSeparator());
             }
         } catch (IOException e) {
             log.error(ExceptionHandler.getExceptionMessage(e));
+            return null;
         }
-        return null;
+        return content.toString();
     }
+
 
     public static void write(String path, String content) {
         try (FileWriter fileWriter = new FileWriter(path); BufferedWriter bufferedWriter = new BufferedWriter(fileWriter)) {

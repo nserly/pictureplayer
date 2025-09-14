@@ -5,7 +5,7 @@
 com-formdev-flatlaf = "3.6.1"
 com-github-adedayo-intellij-sdk-forms-rt = "142.1"
 com-github-oshi-oshi-core = "6.8.3"
-com-google-code-gson-gson = "2.13.1"
+com-google-code-gson-gson = "2.13.2"
 com-twelvemonkeys-imageio-imageio = "3.12.0"
 net-coobird-thumbnailator = "0.4.20"
 net-java-dev-jna = "5.17.0"
