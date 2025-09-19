@@ -36,7 +36,8 @@ dependencies {
 group = "top.nserly"
 version = "1.0-SNAPSHOT"
 description = "PicturePlayer"
-java.sourceCompatibility = JavaVersion.VERSION_21
+java.sourceCompatibility = JavaVersion.VERSION_25
+java.targetCompatibility = JavaVersion.VERSION_25
 
 publishing {
     publications.create<MavenPublication>("maven") {
@@ -52,6 +53,15 @@ tasks.withType<JavaCompile> {
     // options.compilerArgs.add("-Werror")
 }
 
+
 tasks.withType<Javadoc> {
     options.encoding = "UTF-8"
+}
+
+tasks.withType<Test> {
+    jvmArgs("--enable-native-access=ALL-UNNAMED")
+}
+
+tasks.withType<JavaExec> {
+    jvmArgs("--enable-native-access=ALL-UNNAMED")
 }

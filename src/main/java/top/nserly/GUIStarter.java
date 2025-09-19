@@ -148,6 +148,11 @@ public class GUIStarter extends JFrame {
                 OpenCLBlurProcessor.getIsSupportedOpenCL()
                         && Boolean.parseBoolean(init.getProperties().getProperty("EnableHardwareAcceleration"));
         paintPicture = new PaintPicturePanel();
+
+        new Thread(() -> {
+            waitThreadsComplete(paintPicture.init);
+            paintPicture.pictureInformationViewer.setOwner(main);
+        }).start();
     });
 
     public static final Image SOFTWARE_FRAME_ICON = SystemNotifications.DefaultIcon.getImage();
@@ -791,7 +796,7 @@ public class GUIStarter extends JFrame {
                                 + "(" + SystemMonitor.JVM_Memory_Usage
                                 + "%" + ")");
                         TotalThread.setText(TTI + SystemMonitor.Program_Thread_Count);
-                        if (OpenCLBlurProcessor.getIsSupportedOpenCL())
+                        if (OpenCLBlurProcessor.getIsSupportedOpenCL() && PaintPicturePanel.isEnableHardwareAcceleration)
                             OpenCLSelectedDeviceNameLavel.setText(OpenCLRendererI + OpenCLBlurProcessor.getSelectedDevice());
                     }, 0, 2, TimeUnit.SECONDS);
                 } else {
