@@ -16,7 +16,7 @@ public class Generator {
     public static final String DownloadWebSite = "https://gitee.com/nserly-huaer/ImagePlayer/raw/master/artifacts/PicturePlayer_jar/";
     public static final String DownloadLibWebSite = DownloadWebSite + "lib/";
 
-    public static void main(String[] args) throws IOException {
+    void main() throws IOException {
         VersionID versionID = new VersionID();
         versionID.setStartMainFile("{MDWebsite}PicturePlayerRunner.exe");
 

@@ -40,7 +40,7 @@ public class GetImageInformation {
 
 
     //算法实现：获取图片Image对象
-    public static BufferedImage getImage(String path) {
+    public static BufferedImage getImage(String path) throws NullPointerException {
         try {
             ImageHandle imageHandle = getImageHandle(new File(path));
             BufferedImage bu = getImage(imageHandle.imageReader());
@@ -54,7 +54,7 @@ public class GetImageInformation {
     }
 
     //算法实现：获取图片BufferedImage对象
-    public static BufferedImage getImage(ImageReader imageReader) throws IOException {
+    public static BufferedImage getImage(ImageReader imageReader) throws IOException, NullPointerException {
         return imageReader.read(0);
     }
 
@@ -152,7 +152,13 @@ public class GetImageInformation {
                         return new ImageHandle(file.getPath(), imageReader, iis);
                     } catch (Exception e) {
                         log.error(ExceptionHandler.getExceptionMessage(e));
-                        return getImageHandle(file, false); // 如果读取失败，回退到自动检测逻辑
+                        try {
+                            return getImageHandle(file, false); // 如果读取失败，回退到自动检测逻辑
+                        } catch (IOException ex) {
+                            log.error("Failed to get ImageReader for file: {}", file.getPath());
+                            throw new RuntimeException(ex);
+                        }
+
                     }
             }
         }

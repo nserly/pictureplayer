@@ -1,12 +1,13 @@
 package top.nserly.PicturePlayer.Size;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import top.nserly.PicturePlayer.NComponent.Component.PaintPicturePanel;
+import top.nserly.SoftwareCollections_API.Handler.Exception.ExceptionHandler;
 import top.nserly.SoftwareCollections_API.Interaction.SystemInteraction.Screen.ScreenManager;
 
 import java.awt.*;
 
+@Slf4j
 public class SizeOperate {
     //默认缩放比例
     private final short Default;
@@ -34,7 +35,6 @@ public class SizeOperate {
     public static final Dimension ScreenSize;
     //可用屏幕尺寸
     public static final Dimension FreeOfScreenSize;
-    private static final Logger logger = LoggerFactory.getLogger(SizeOperate.class);
 
     static {
         //获取屏幕分辨率
@@ -98,13 +98,16 @@ public class SizeOperate {
         if (window != null) {
             this.Component = window;
             FittestPercent = getPictureOptimalSize();
-            if (PictureSize == null && imageCanvas != null && window.getWidth() != 0 && window.getHeight() != 0)
+            if (PictureSize == null && imageCanvas != null) {
                 try {
                     PictureSize = new Dimension(imageCanvas.getImageWidth(), imageCanvas.getImageHeight());
                 } catch (Exception e) {
+                    log.warn("Could not get picture size");
+                    log.warn(ExceptionHandler.getExceptionMessage(e));
                     return;
                 }
-            AdjustPercent = (int) (((Math.abs(window.getHeight() - PictureSize.height) / 5.5 / PictureSize.height) + (Math.abs(window.getWidth() - PictureSize.width) / 5.5 / PictureSize.width)) / 2);
+                AdjustPercent = (int) (((Math.abs(window.getHeight() - PictureSize.height) / 5.5 / PictureSize.height) + (Math.abs(window.getWidth() - PictureSize.width) / 5.5 / PictureSize.width)) / 2);
+            }
         }
     }
 
@@ -130,7 +133,7 @@ public class SizeOperate {
     //获取图片最佳比例
     public double getPictureOptimalSize() {
         if (Component == null || Component.width == 0 || Component.height == 0) {
-            logger.warn("Could not get window optimal size");
+            log.warn("Could not get window optimal size");
             return Default;
         }
         int PictureWidth = imageCanvas.getImageWidth();

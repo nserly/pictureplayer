@@ -117,12 +117,7 @@ public class PaintPicturePanel extends JPanel {
     public PaintPicturePanel() {
         paintPicture = this;
         $$$setupUI$$$();
-        try (ObjectInputStream objectInputStream = new ObjectInputStream(new FileInputStream("data/PictureCacheManagement.obj"))) {
-            pictureInformationStorageManagement = (PictureInformationStorageManagement) objectInputStream.readObject();
-        } catch (IOException | ClassNotFoundException e) {
-            log.error(ExceptionHandler.getExceptionMessage(e));
-            pictureInformationStorageManagement = new PictureInformationStorageManagement();
-        }
+        loadPictureInformationStorageManagement();
         init = new Thread(() -> {
             ExceptionHandler.setUncaughtExceptionHandler(log);
             setLayout(new BorderLayout());
@@ -161,12 +156,13 @@ public class PaintPicturePanel extends JPanel {
         GUIStarter.waitThreadsComplete(init);
     }
 
-    public void fitComponent() {
+    public synchronized void fitComponent() {
         waitInitComplete();
 
-        sizeOperate.incomeWindowDimension(imageCanvas.getSize());
-        sizeOperate.setPercent(sizeOperate.getPictureOptimalSize());
-        sizeOperate.update(false);
+        SwingUtilities.invokeLater(() -> {
+            sizeOperate.incomeWindowDimension(imageCanvas.getSize());
+            sizeOperate.changeCanvas(imageCanvas, true);
+        });
     }
 
     private void loadPictureInTheParent(String picturePath) {
@@ -177,10 +173,15 @@ public class PaintPicturePanel extends JPanel {
         }
         if (!pictureParent.equals(lastPicturePathParent)) {
             //获取当前图片路径下所有图片
-            CurrentPathOfPicture = GetImageInformation.getCurrentPathOfPicture(picturePath);
             lastPicturePathParent = pictureParent;
-            GUIStarter.main.reviewPictureList(CurrentPathOfPicture);
+            refreshPictureThumbnail();
         }
+    }
+
+    public synchronized void refreshPictureThumbnail() {
+        if (lastPicturePathParent == null || !lastPicturePathParent.exists()) return;
+        CurrentPathOfPicture = GetImageInformation.getCurrentPathOfPicture(lastPicturePathParent.getPath());
+        GUIStarter.main.reviewPictureList(CurrentPathOfPicture);
     }
 
     public void openPicture(String path) {
@@ -369,9 +370,27 @@ public class PaintPicturePanel extends JPanel {
         PictureResolution.setText((int) dimension.getWidth() + "x" + (int) dimension.getHeight());
     }
 
+    private void loadPictureInformationStorageManagement() {
+        try (ObjectInputStream objectInputStream = new ObjectInputStream(new FileInputStream("data/PictureCacheManagement.obj"))) {
+            pictureInformationStorageManagement = (PictureInformationStorageManagement) objectInputStream.readObject();
+        } catch (IOException | ClassNotFoundException e) {
+            log.error(ExceptionHandler.getExceptionMessage(e));
+            pictureInformationStorageManagement = new PictureInformationStorageManagement();
+        }
+    }
+
+    private void savePictureInformationStorageManagement() {
+        try (ObjectOutputStream objectOutputStream = new ObjectOutputStream(
+                new FileOutputStream("data/PictureCacheManagement.obj"))) {
+            objectOutputStream.writeObject(pictureInformationStorageManagement);
+            objectOutputStream.flush();
+        } catch (IOException e) {
+            log.error(ExceptionHandler.getExceptionMessage(e));
+        }
+    }
+
     //改变图片路径
     public void changePicturePath(String path) {
-        log.info("Opened:\"{}\"", path);
         AtomicReference<String> hashCode = new AtomicReference<>();
         AtomicReference<BufferedImage> image = new AtomicReference<>();
 
@@ -382,17 +401,19 @@ public class PaintPicturePanel extends JPanel {
 
         GUIStarter.waitThreadsComplete(getHashCodeThread, getBufferedImage, init);
 
-        sizeOperate.incomeWindowDimension(imageCanvas.getSize());
-        imageCanvas.changePicturePath(image.get(), path, hashCode.get());
+        changePicturePath(image.get(), path, hashCode.get());
     }
 
     //改变图片路径
     public void changePicturePath(BufferedImage bufferedImage, String path) {
+        changePicturePath(bufferedImage, path, GetImageInformation.getHashcode(new File(path)));
+    }
+
+    public synchronized void changePicturePath(BufferedImage bufferedImage, String path, String picture_hashcode) {
         log.info("Opened:\"{}\"", path);
         waitInitComplete();
         validate();
-        sizeOperate.incomeWindowDimension(imageCanvas.getSize());
-        imageCanvas.changePicturePath(bufferedImage, path, GetImageInformation.getHashcode(new File(path)));
+        imageCanvas.changePicturePath(bufferedImage, path, picture_hashcode);
     }
 
     /**
@@ -731,6 +752,10 @@ public class PaintPicturePanel extends JPanel {
             changePicturePath(path, GetImageInformation.getHashcode(new File(path)));
         }
 
+        public void changePicturePath(final BufferedImage image, String path) {
+            changePicturePath(image, path, GetImageInformation.getHashcode(new File(path)));
+        }
+
         public void changePicturePath(String path, String picture_hashcode) {
             BufferedImage image = GetImageInformation.getImage(
                     pictureInformationStorageManagement.getCachedPicturePath(path, picture_hashcode));
@@ -759,11 +784,11 @@ public class PaintPicturePanel extends JPanel {
                 BlurBufferedImage = null;
             }
             this.image = image;
-            if (sizeOperate != null) sizeOperate.changeCanvas(this, !isRepeat);
+
+            fitComponent();
 
             if (isLowOccupancyMode)
                 isLowOccupancyMode = false;
-
 
             new Thread(() -> {
                 //设置当前图片路径下图片信息
@@ -781,6 +806,7 @@ public class PaintPicturePanel extends JPanel {
 
                 System.gc();
             }).start();
+
             if (isEnableHardware && !isRepeat) {
                 new Thread(() -> {
                     BufferedImage srcBlurBufferedImage = GetImageInformation.castToTYPEINTRGB(image);
@@ -790,25 +816,14 @@ public class PaintPicturePanel extends JPanel {
                     }
                     openCLBlurProcessor.changeImage(srcBlurBufferedImage);
                     srcBlurBufferedImage.flush();
-                    sizeOperate.update(false);
                 }).start();
             }
-        }
-
-        public void changePicturePath(final BufferedImage image, String path) {
-            changePicturePath(image, path, GetImageInformation.getHashcode(new File(path)));
         }
 
 
         public void close() {
             removeAll();
-            try (ObjectOutputStream objectOutputStream = new ObjectOutputStream(
-                    new FileOutputStream("data/PictureCacheManagement.obj"))) {
-                objectOutputStream.writeObject(pictureInformationStorageManagement);
-                objectOutputStream.flush();
-            } catch (IOException e) {
-                log.error(ExceptionHandler.getExceptionMessage(e));
-            }
+            savePictureInformationStorageManagement();
             timer.stop();
             if (openCLBlurProcessor != null)
                 openCLBlurProcessor.close();
@@ -841,29 +856,26 @@ public class PaintPicturePanel extends JPanel {
         }
 
         //打开上一个/下一个图片
-        public void openLONPicture(int sign) {
-            for (String path : CurrentPathOfPicture) {
-                File file = new File(path);
-                if (!file.exists()) CurrentPathOfPicture.remove(path);
-            }
+        public synchronized void openLONPicture(int sign) {
             int CurrentIndex = CurrentPathOfPicture.indexOf(imageCanvas.path);
-            switch (sign) {
-                case LastSign -> {
-                    if (CurrentIndex > 0) {
-                        //向控制台输出打开文件路径
-                        log.info("Opened:\"{}\"", CurrentPathOfPicture.get(CurrentIndex - 1));
-                        imageCanvas.changePicturePath(CurrentPathOfPicture.get(CurrentIndex - 1));
-                        sizeOperate.update(false);
-                    }
-                }
-                case NextSign -> {
-                    if (CurrentIndex + 1 < CurrentPathOfPicture.size()) {
-                        //向控制台输出打开文件路径
-                        log.info("Opened:\"{}\"", CurrentPathOfPicture.get(CurrentIndex + 1));
-                        imageCanvas.changePicturePath(CurrentPathOfPicture.get(CurrentIndex + 1));
-                        sizeOperate.update(false);
-                    }
-                }
+
+            int openIndex = sign == LastSign ? CurrentIndex - 1 : sign == NextSign ? CurrentIndex + 1 : -1;
+            try {
+                openPicture(openIndex);
+            } catch (NullPointerException e) {
+                log.error("Cannot open picture: {}", CurrentPathOfPicture.get(openIndex));
+                log.error(ExceptionHandler.getExceptionMessage(e));
+                CurrentPathOfPicture.remove(openIndex);
+                openLONPicture(sign);
+            }
+        }
+
+        private synchronized void openPicture(int index) throws NullPointerException {
+            if (index >= 0 && index < CurrentPathOfPicture.size()) {
+                //向控制台输出打开文件路径
+                log.info("Opened:\"{}\"", CurrentPathOfPicture.get(index));
+                imageCanvas.changePicturePath(CurrentPathOfPicture.get(index));
+                sizeOperate.update(false);
             }
         }
 

@@ -780,9 +780,10 @@ public class GUIStarter extends JFrame {
             final String TTI = TotalThread.getText();
             final String OpenCLRendererI = OpenCLSelectedDeviceNameLavel.getText();
             OpenCLSelectedDeviceNameLavel.setText(OpenCLRendererI + "<No OpenCL device selected>");
-            tabbedPane1.addChangeListener(e -> {
+            tabbedPane1.addChangeListener(_ -> {
                 request();
-                if (tabbedPane1.getSelectedIndex() == 3) {
+                int tabIndex = tabbedPane1.getSelectedIndex();
+                if (tabIndex == 3) {
                     future = executor.scheduleAtFixedRate(() -> {
                         SystemMonitor.getInformation();
                         MemUsed.setText(JmemI + SystemMonitor.convertSize(
@@ -795,9 +796,10 @@ public class GUIStarter extends JFrame {
                             OpenCLSelectedDeviceNameLavel.setText(OpenCLRendererI + OpenCLBlurProcessor.getSelectedDevice());
                     }, 0, 2, TimeUnit.SECONDS);
                 } else {
+                    if (tabIndex == 0 && paintPicture != null) paintPicture.refreshPictureThumbnail();
                     if (future != null) future.cancel(false);
                 }
-                if (tabbedPane1.getSelectedIndex() == 2 && !IsFreshen) {
+                if (tabIndex == 2 && !IsFreshen) {
                     IsFreshen = true;
                     reFresh();
                 }
@@ -1205,6 +1207,7 @@ public class GUIStarter extends JFrame {
             for (String path : pathsToAdd) {
                 ThumbnailPreviewOfImage thumbnail;
                 thumbnail = new ThumbnailPreviewOfImage(path);
+
                 newThumbnails.add(thumbnail);
                 thumbnailPreviewOfImages.put(path, thumbnail);
             }
@@ -1382,16 +1385,17 @@ public class GUIStarter extends JFrame {
         new Thread(() -> {
             ExceptionHandler.setUncaughtExceptionHandler(log);
             waitThreadsComplete(init_PaintPicture);
-            if (paintPicture.imageCanvas == null || paintPicture.imageCanvas.getPath() == null) {
-                tabbedPane1.setComponentAt(1, paintPicture);
-                new DropTarget(paintPicture, DnDConstants.ACTION_COPY_OR_MOVE, dropTargetAdapter, true);
-            }
+            SwingUtilities.invokeLater(() -> {
+                if (paintPicture.imageCanvas == null || paintPicture.imageCanvas.getPath() == null) {
+                    tabbedPane1.setComponentAt(1, paintPicture);
+                    new DropTarget(paintPicture, DnDConstants.ACTION_COPY_OR_MOVE, dropTargetAdapter, true);
+                }
 
-            paintPicture.setSize(tabbedPane1.getSize());
-            tabbedPane1.setSelectedIndex(1);
-            paintPicture.changePicturePath(path);
+                tabbedPane1.setSelectedIndex(1);
 
-            paintPicture.fitComponent();
+                paintPicture.changePicturePath(path);
+            });
+
         }).start();
     }
 }

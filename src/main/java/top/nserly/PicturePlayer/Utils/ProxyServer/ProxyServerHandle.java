@@ -2,6 +2,7 @@ package top.nserly.PicturePlayer.Utils.ProxyServer;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import top.nserly.SoftwareCollections_API.Handler.Exception.ExceptionHandler;
 
 import java.io.*;
 import java.util.Collection;
@@ -22,7 +23,7 @@ public class ProxyServerHandle {
                 if(!this.savePath.createNewFile())
                     log.warn("{} cannot create",this.savePath.getPath());
             } catch (IOException e) {
-                log.error(e.getMessage());
+                log.error(ExceptionHandler.getExceptionMessage(e));
             }
         }
     }
@@ -35,8 +36,9 @@ public class ProxyServerHandle {
             in.close();
             fileIn.close();
         } catch (IOException | ClassNotFoundException e) {
-            log.error(e.getMessage());
+            log.error(ExceptionHandler.getExceptionMessage(e));
             fileManager = new ProxyServerFileManage();
+            save();
         }
 
     }
@@ -105,7 +107,7 @@ public class ProxyServerHandle {
             out.close();
             fileOut.close();
         } catch (IOException e) {
-            log.error(e.getMessage());
+            log.error(ExceptionHandler.getExceptionMessage(e));
         }
     }
 }

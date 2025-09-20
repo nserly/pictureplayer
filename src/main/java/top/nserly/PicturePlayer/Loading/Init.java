@@ -1,6 +1,7 @@
 package top.nserly.PicturePlayer.Loading;
 
 import lombok.extern.slf4j.Slf4j;
+import top.nserly.SoftwareCollections_API.Handler.Exception.ExceptionHandler;
 
 import java.io.*;
 import java.lang.reflect.Method;
@@ -96,13 +97,13 @@ public class Init<KEY, VALUE> {
     }
 
     public void changeValue(KEY key, VALUE value) {
-        properties.remove(key, value);
-        properties.put(key, value);
+        properties.remove(key.toString(), value.toString());
+        properties.put(key.toString(), value.toString());
         if (EnableAutoUpdate) store();
     }
 
     public void remove(KEY key, VALUE value) {
-        properties.remove(key, value);
+        properties.remove(key.toString(), value.toString());
         if (EnableAutoUpdate) store();
     }
 
@@ -113,12 +114,12 @@ public class Init<KEY, VALUE> {
     @SafeVarargs
     public final void remove(KEY... key) {
         for (KEY i : key) {
-            properties.remove(i);
+            properties.remove(i.toString());
         }
         if (EnableAutoUpdate) store();
     }
 
-    public void writer(Map<?, ?> map) {
+    public void writer(Map<String, String> map) {
         if (!isInit.get()) init();
         properties.putAll(map);
         store();
@@ -126,16 +127,16 @@ public class Init<KEY, VALUE> {
 
     public void writer(KEY key, VALUE value) {
         if (!isInit.get()) init();
-        properties.put(key, value);
+        properties.put(key.toString(), value.toString());
         store();
     }
 
     @DefaultArgs
-    public Map<String, Object> setDefault() { // 修改这里的泛型为 <String, Object>
-        HashMap<String, Object> hashMap = new HashMap<>();
+    public Map<String, String> setDefault() { // 修改这里的泛型为 <String, Object>
+        HashMap<String, String> hashMap = new HashMap<>();
         var method = DefaultArgs.class.getDeclaredMethods();
         for (Method i : method) {
-            hashMap.put(i.getName(), i.getDefaultValue()); // 现在应该可以正确地添加键值对
+            hashMap.put(i.getName(), i.getDefaultValue().toString()); // 现在应该可以正确地添加键值对
         }
         return hashMap;
     }
@@ -146,6 +147,7 @@ public class Init<KEY, VALUE> {
             properties.store(new BufferedWriter(new FileWriter(f)), "");
         } catch (Exception e) {
             log.error("Failed to save the configuration file");
+            log.error(ExceptionHandler.getExceptionMessage(e));
         }
     }
 }
