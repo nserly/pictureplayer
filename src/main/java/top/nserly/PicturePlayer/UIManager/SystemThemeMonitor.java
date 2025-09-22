@@ -19,7 +19,6 @@ import java.util.function.Consumer;
  */
 @Slf4j
 public class SystemThemeMonitor {
-    private static final String DARK_MODE_KEY = "AppleInterfaceStyle";
     private final Consumer<Boolean> themeChangeCallback;
     private final OSThemeDetector detector;
     private final ScheduledExecutorService executor;

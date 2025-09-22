@@ -6,8 +6,6 @@ import top.nserly.SoftwareCollections_API.Handler.Exception.ExceptionHandler;
 
 import javax.imageio.ImageIO;
 import javax.imageio.ImageReader;
-import javax.imageio.metadata.IIOMetadata;
-import javax.imageio.metadata.IIOMetadataNode;
 import javax.imageio.stream.ImageInputStream;
 import java.awt.*;
 import java.awt.image.BufferedImage;
@@ -41,11 +39,8 @@ public class GetImageInformation {
 
     //算法实现：获取图片Image对象
     public static BufferedImage getImage(String path) throws NullPointerException {
-        try {
-            ImageHandle imageHandle = getImageHandle(new File(path));
-            BufferedImage bu = getImage(imageHandle.imageReader());
-            imageHandle.close();
-            return bu;
+        try (ImageHandle imageHandle = getImageHandle(new File(path))){
+            return getImage(imageHandle.imageReader());
         } catch (IOException e) {
             log.error(ExceptionHandler.getExceptionMessage(e));
             return null;
@@ -190,60 +185,15 @@ public class GetImageInformation {
 
     //算法实现：获取图片分辨率
     public static Dimension getImageResolution(File file) throws IOException {
-        ImageHandle imageHandle = getImageHandle(file);
-        Dimension dimension = getImageResolution(imageHandle.imageReader());
-        imageHandle.close();
-        return dimension;
+        try(ImageHandle imageHandle = getImageHandle(file)){
+            return getImageResolution(imageHandle.imageReader());
+        }
     }
 
     //算法实现：获取图片分辨率
     public static Dimension getImageResolution(ImageReader imageReader) throws IOException {
         return new Dimension(imageReader.getWidth(0), imageReader.getHeight(0));
     }
-
-    /**
-     * 算法实现：获取图片DPI（每英寸点数）。
-     *
-     * @param file 图片文件对象。
-     * @return 返回图片的DPI值，如果无法从元数据中获取指定方向的DPI，则返回默认值72.0f。
-     * @throws IOException 如果找不到合适的ImageReader或读取过程中发生错误，则抛出此异常。
-     */
-    public static ImageDPI getImageDPI(File file) throws IOException {
-        ImageHandle imageReader = getImageHandle(file);
-        ImageDPI imageDPI = getImageDPI(imageReader.imageReader());
-        imageReader.close();
-        return imageDPI;
-    }
-
-    public static ImageDPI getImageDPI(ImageReader imageReader) throws IOException {
-        float HorizontalDPI = 72.0f; // 默认水平DPI
-        float VerticalDPI = 72.0f; // 默认垂直DPI
-        // 获取元数据
-        IIOMetadata metadata = imageReader.getImageMetadata(0);
-        if (metadata.isStandardMetadataFormatSupported()) {
-            IIOMetadataNode root = (IIOMetadataNode) metadata.getAsTree("javax_imageio_1.0");
-            IIOMetadataNode horizontalCR = getNode(root, "HorizontalPixelSize");
-            IIOMetadataNode verticalCR = getNode(root, "VerticalPixelSize");
-
-            if (horizontalCR != null) {
-                HorizontalDPI = Float.parseFloat(horizontalCR.getAttribute("value"));
-            } else if (verticalCR != null) {
-                VerticalDPI = Float.parseFloat(verticalCR.getAttribute("value"));
-            }
-        }
-        return new ImageDPI(HorizontalDPI, VerticalDPI);
-    }
-
-    private static IIOMetadataNode getNode(IIOMetadataNode rootNode, String nodeName) {
-        int nNodes = rootNode.getLength();
-        for (int i = 0; i < nNodes; i++) {
-            if (rootNode.item(i).getNodeName().equalsIgnoreCase(nodeName)) {
-                return (IIOMetadataNode) rootNode.item(i);
-            }
-        }
-        return null;
-    }
-
 
     //算法实现：获取图片hashcode值（CRC32）
     public static String getHashcode(File file) {
@@ -307,10 +257,10 @@ public class GetImageInformation {
 
     //算法实现：获取图片类型
     public static String getImageType(File file) throws IOException {
-        ImageHandle imageHandle = getImageHandle(file);
-        String type = getImageType(imageHandle.imageReader());
-        imageHandle.close();
-        return type;
+        try(ImageHandle imageHandle = getImageHandle(file)){
+            return getImageType(imageHandle.imageReader());
+        }
+
     }
 
     //算法实现：获取图片类型

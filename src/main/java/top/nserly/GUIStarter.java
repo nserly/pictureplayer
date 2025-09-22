@@ -32,6 +32,7 @@ import top.nserly.SoftwareCollections_API.Interaction.SoftwareInteraction.Softwa
 import top.nserly.SoftwareCollections_API.Interaction.SystemInteraction.Notifications.SystemNotifications;
 import top.nserly.SoftwareCollections_API.OSInformation.SystemMonitor;
 import top.nserly.SoftwareCollections_API.String.StringFormation;
+import top.nserly.SoftwareCollections_API.Thread.ThreadControl;
 
 import javax.swing.*;
 import javax.swing.filechooser.FileSystemView;
@@ -49,6 +50,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Method;
@@ -59,6 +61,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 @Slf4j
@@ -150,7 +153,7 @@ public class GUIStarter extends JFrame {
         paintPicture = new PaintPicturePanel();
 
         new Thread(() -> {
-            waitThreadsComplete(paintPicture.init);
+            ThreadControl.waitThreadsComplete(paintPicture.init);
             paintPicture.pictureInformationViewer.setOwner(main);
         }).start();
     });
@@ -690,21 +693,13 @@ public class GUIStarter extends JFrame {
                 }).start();
             }
 
-            waitThreadsComplete(init_PaintPicture);
+            ThreadControl.waitThreadsComplete(init_PaintPicture);
             paintPicture.pictureInformationStorageManagement.optimize();
         }).start();
     }
 
     //初始化所有组件设置
     private void init() {
-//        FileChoosePaneScrollPane.getViewport().addChangeListener(e -> {
-//            // 当视口大小变化时，强制内容面板宽度等于视口宽度
-//            Dimension viewportSize = FileChoosePaneScrollPane.getViewport().getSize();
-//            FileChoosePaneScrollPane.setPreferredSize(viewportSize);
-//            FileChoosePaneScrollPane.setMaximumSize(new Dimension(viewportSize.width, Short.MAX_VALUE));
-//            FileChoosePaneScrollPane.revalidate(); // 刷新布局
-//        });
-
         VersionView.setText(VersionView.getText() + PicturePlayerVersion.getShorterVersion());
         BuildView.setText(PicturePlayerVersion.getBuildVersion());
         TurnButton.addMouseListener(changeFocusListener);
@@ -1086,13 +1081,27 @@ public class GUIStarter extends JFrame {
         // 尝试读取是否为第一个实例
         if ((!windowsAppMutex.isFirstInstance()) && (!isNUpdate)) {
             windowsAppMutex.sendSoftwareVisibleDirectiveToExistingInstance(true);
-            waitThreadsComplete(pictureFileThread);
+            ThreadControl.waitThreadsComplete(pictureFileThread);
             // 发送参数到已有实例
             if (openingFilePath.get() != null && !openingFilePath.get().isBlank()) {
                 windowsAppMutex.sendFilePathToExistingInstance(openingFilePath.get());
             }
             exitAndRecord();
         }
+
+        AtomicReference<BufferedImage> image = new AtomicReference<>();
+        AtomicReference<String> hashCode = new AtomicReference<>();
+        AtomicBoolean isImageLoaded = new AtomicBoolean(false);
+
+        Thread getImageAndHashCode = new Thread(() -> {
+            ThreadControl.waitThreadsComplete(pictureFileThread);
+            if (openingFilePath.get() != null && !openingFilePath.get().isBlank()) {
+                image.set(GetImageInformation.getImage(openingFilePath.get()));
+                hashCode.set(GetImageInformation.getHashcode(new File(openingFilePath.get())));
+                isImageLoaded.set(true);
+            }
+        });
+        getImageAndHashCode.start();
 
         init.run();
         UIManager.getUIManager().setTheme(SettingsInfoHandle.getInt("ThemeMode", init.getProperties()));
@@ -1102,11 +1111,12 @@ public class GUIStarter extends JFrame {
         init_PaintPicture.start();
 
         main = new GUIStarter("Picture Player(Version:" + PicturePlayerVersion.getVersion() + ")");
-        new Thread(() -> {
-            waitThreadsComplete(pictureFileThread);
 
-            if (openingFilePath.get() != null && !openingFilePath.get().isBlank())
-                main.openPicture(openingFilePath.get());
+        new Thread(() -> {
+            ThreadControl.waitThreadsComplete(getImageAndHashCode);
+
+            if (isImageLoaded.get())
+                main.openPicture(image.get(), openingFilePath.get(), hashCode.get());
         }).start();
 
         windowsAppMutex.addHandleSoftwareRequestAction(new HandleSoftwareRequestAction() {
@@ -1122,10 +1132,9 @@ public class GUIStarter extends JFrame {
         });
 
         new Thread(GUIStarter::extractedSystemInfoToLog).start();
-        new Thread(() -> {
-            initSystemTrayMenuItems();
-            initSystemTray();
-        }).start();
+
+        initSystemTrayMenuItems();
+        initSystemTray();
     }
 
     private File checkFileOpen(CheckFileIsRightPictureType checkFileIsRightPictureType, boolean isMakeSure) {
@@ -1300,21 +1309,6 @@ public class GUIStarter extends JFrame {
         return checkFileOpen(new CheckFileIsRightPictureType(files), true);
     }
 
-
-    public static void waitThreadsComplete(Thread... threads) {
-        if (threads != null)
-            for (Thread thread : threads) {
-                if (thread != null) {
-                    try {
-                        thread.join();
-                    } catch (InterruptedException ignored) {
-
-                    }
-                }
-            }
-    }
-
-
     //关闭
     public static void close() {
         if (GUIStarter.main.getTitle().contains("*")) {
@@ -1381,21 +1375,39 @@ public class GUIStarter extends JFrame {
     //打开图片
     public void openPicture(String path) {
         if (path == null || path.endsWith("???")) return;
+
+        AtomicReference<BufferedImage> image = new AtomicReference<>();
+
+        Thread getBufferedImage = new Thread(() -> image.set(GetImageInformation.getImage(path)));
+        getBufferedImage.start();
+
+        String hashCode = GetImageInformation.getHashcode(new File(path));
+
+        ThreadControl.waitThreadsComplete(getBufferedImage);
+
+        openPicture(image.get(), path, hashCode);
+    }
+
+    public synchronized void openPicture(BufferedImage image, String path, String hashcode) {
+        if (image == null || path == null || path.endsWith("???")) return;
+
         textField1.setText(path);
+
         new Thread(() -> {
             ExceptionHandler.setUncaughtExceptionHandler(log);
-            waitThreadsComplete(init_PaintPicture);
-            SwingUtilities.invokeLater(() -> {
-                if (paintPicture.imageCanvas == null || paintPicture.imageCanvas.getPath() == null) {
-                    tabbedPane1.setComponentAt(1, paintPicture);
-                    new DropTarget(paintPicture, DnDConstants.ACTION_COPY_OR_MOVE, dropTargetAdapter, true);
-                }
 
-                tabbedPane1.setSelectedIndex(1);
+            tabbedPane1.setSelectedIndex(1);
 
-                paintPicture.changePicturePath(path);
-            });
+            ThreadControl.waitThreadsComplete(init_PaintPicture);
+
+            if (!tabbedPane1.getComponentAt(1).equals(paintPicture)) {
+                tabbedPane1.setComponentAt(1, paintPicture);
+                new DropTarget(paintPicture, DnDConstants.ACTION_COPY_OR_MOVE, dropTargetAdapter, true);
+            }
+
+            paintPicture.changePicturePath(image, path, hashcode);
 
         }).start();
     }
+
 }

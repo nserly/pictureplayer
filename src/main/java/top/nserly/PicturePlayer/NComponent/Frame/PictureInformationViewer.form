@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<form xmlns="http://www.intellij.com/uidesigner/form/" version="1" bind-to-class="top.nserly.PicturePlayer.NComponent.Component.PictureInformationViewer">
+<form xmlns="http://www.intellij.com/uidesigner/form/" version="1" bind-to-class="top.nserly.PicturePlayer.NComponent.Frame.PictureInformationViewer">
   <scrollpane id="1cd96" binding="MainPanel">
     <constraints>
       <xy x="20" y="20" width="461" height="240"/>

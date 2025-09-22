@@ -4,6 +4,7 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import top.nserly.GUIStarter;
 import top.nserly.PicturePlayer.NComponent.Frame.FullScreenFrame;
+import top.nserly.PicturePlayer.NComponent.Frame.PictureInformationViewer;
 import top.nserly.PicturePlayer.Settings.SettingsInfoHandle;
 import top.nserly.PicturePlayer.Size.OperatingCoordinate;
 import top.nserly.PicturePlayer.Size.SizeOperate;
@@ -16,6 +17,7 @@ import top.nserly.PicturePlayer.Utils.ImageManager.Info.ImageHandle;
 import top.nserly.PicturePlayer.Utils.ImageManager.PictureInformationStorageManagement;
 import top.nserly.PicturePlayer.Version.DownloadChecker.AdvancedDownloadSpeed;
 import top.nserly.SoftwareCollections_API.Handler.Exception.ExceptionHandler;
+import top.nserly.SoftwareCollections_API.Thread.ThreadControl;
 
 import javax.swing.*;
 import javax.swing.plaf.FontUIResource;
@@ -153,7 +155,7 @@ public class PaintPicturePanel extends JPanel {
     }
 
     public void waitInitComplete() {
-        GUIStarter.waitThreadsComplete(init);
+        ThreadControl.waitThreadsComplete(init);
     }
 
     public synchronized void fitComponent() {
@@ -253,10 +255,8 @@ public class PaintPicturePanel extends JPanel {
             @Override
             public void mouseClicked(MouseEvent e) {
                 if (imageCanvas.getPath() != null && !imageCanvas.getPath().equals(pictureInformationViewer.getPicturePath())) {
-                    try {
-                        ImageHandle imageHandle = GetImageInformation.getImageHandle(new File(imageCanvas.getPath()));
+                    try (ImageHandle imageHandle = GetImageInformation.getImageHandle(new File(imageCanvas.getPath()))) {
                         pictureInformationViewer.update(imageHandle);
-                        imageHandle.close();
                     } catch (IOException ex) {
                         log.error(ExceptionHandler.getExceptionMessage(ex));
                     }
@@ -399,7 +399,7 @@ public class PaintPicturePanel extends JPanel {
         getHashCodeThread.start();
         getBufferedImage.start();
 
-        GUIStarter.waitThreadsComplete(getHashCodeThread, getBufferedImage, init);
+        ThreadControl.waitThreadsComplete(getHashCodeThread, getBufferedImage, init);
 
         changePicturePath(image.get(), path, hashCode.get());
     }

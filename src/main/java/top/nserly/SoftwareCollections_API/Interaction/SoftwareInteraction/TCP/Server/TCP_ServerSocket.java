@@ -96,12 +96,15 @@ public class TCP_ServerSocket {
     }
 
     public static boolean isPortAvailable(int port) {
-        try (ServerSocket ignored = new ServerSocket(port)) {
+        try (java.nio.channels.ServerSocketChannel channel = java.nio.channels.ServerSocketChannel.open()) {
+            channel.socket().setReuseAddress(true);
+            channel.socket().bind(new java.net.InetSocketAddress(port));
             return true;
         } catch (IOException e) {
             return false;
         }
     }
+
 
     public static void send(Socket socket, String message) throws IOException {
         if (socket == null || !socket.isConnected()) {

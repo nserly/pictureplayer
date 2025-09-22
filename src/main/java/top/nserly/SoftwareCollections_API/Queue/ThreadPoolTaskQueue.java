@@ -36,18 +36,15 @@ public class ThreadPoolTaskQueue {
         BlockingQueue<Runnable> workQueue = new LinkedBlockingQueue<>(1024);
 
         // 拒绝策略：当队列满时阻塞提交者，直到有空间
-        RejectedExecutionHandler handler = new RejectedExecutionHandler() {
-            @Override
-            public void rejectedExecution(Runnable r, ThreadPoolExecutor executor) {
-                try {
-                    // 等待队列有空间（最多等1秒，避免无限阻塞）
-                    if (!executor.getQueue().offer(r, 1, TimeUnit.SECONDS)) {
-                        throw new RejectedExecutionException("The task queue is full, and adding tasks fails");
-                    }
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    throw new RejectedExecutionException("Task addition is interrupted", e);
+        RejectedExecutionHandler handler = (r, executor) -> {
+            try {
+                // 等待队列有空间（最多等1秒，避免无限阻塞）
+                if (!executor.getQueue().offer(r, 1, TimeUnit.SECONDS)) {
+                    throw new RejectedExecutionException("The task queue is full, and adding tasks fails");
                 }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new RejectedExecutionException("Task addition is interrupted", e);
             }
         };
 

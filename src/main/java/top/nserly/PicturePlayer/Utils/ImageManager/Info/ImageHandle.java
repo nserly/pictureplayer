@@ -13,12 +13,13 @@ import java.io.IOException;
  * releasing system resources after the image processing is complete.
  */
 
-public record ImageHandle(String path, ImageReader imageReader, ImageInputStream imageInputStream) {
+public record ImageHandle(String path, ImageReader imageReader, ImageInputStream imageInputStream) implements AutoCloseable{
 
     /**
      * Closes the ImageInputStream associated with this ImageHandle.
      * This method is used to release system resources associated with the stream.
      */
+    @Override
     public void close() throws IOException {
         imageInputStream.close();
         imageReader.dispose();
