@@ -1,6 +1,11 @@
 # ImagePlayer
 
 一个功能丰富的图像播放器应用程序，提供流畅的图片浏览体验和多种实用功能。
+## 运行说明
+使用一下命令运行此jar文件（已知程序名为PicturePlayer.jar，依赖在此程序目录下lib文件夹中）
+```bash
+java -cp "PicturePlayer.jar;lib/*" top.nserly.GUIStarter -XX:+UseG1GC
+```
 
 ## 功能特性
 
@@ -17,8 +22,8 @@
 
 ## 系统要求
 
-- Windows 7及以上版本
-- 需要Java运行环境
+- 仅支持Windows 10 2004及以上版本，Linux操作系统
+- 需要JVM 25运行环境
 - 支持OpenCL的GPU设备（可选）
 
 ## 安装说明
