@@ -1,6 +1,14 @@
 # ImagePlayer
+简体中文 | [ENGLISH](https://gitee.com/nserly-huaer/ImagePlayer/blob/master/README.en.md)
 
 A feature-rich image player application that provides a smooth image browsing experience and various practical functions.
+## Operating Instructions
+
+Use the following command to run this jar file (it is known that the program is named PicturePlayer.jar and the dependencies are in the lib folder under this program's directory).
+
+```bash
+java -cp "PicturePlayer.jar;lib/*" Runner.Main -XX:+UseG1GC
+```
 
 ## Key Features
 
@@ -17,8 +25,8 @@ A feature-rich image player application that provides a smooth image browsing ex
 
 ## System Requirements
 
-- Windows 7 or later
-- Requires Java Runtime Environment
+- Only supports Windows 10 version 2004 and above, Linux operating system.
+- Requires JRE 25 runtime environment
 - OpenCL-capable GPU device (optional)
 
 ## Installation Instructions
