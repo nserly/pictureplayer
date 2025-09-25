@@ -1,5 +1,5 @@
 # ImagePlayer
-ENGLISH | [简体中文](https://gitee.com/nserly-huaer/ImagePlayer/blob/master/README.md)
+ENGLISH | [简体中文](README.md)
 
 A feature-rich image player application that provides a smooth image browsing experience and various practical functions.
 ## Operating Instructions
