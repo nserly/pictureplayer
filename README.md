@@ -1,5 +1,5 @@
 # ImagePlayer
-[ENGLISH](README.en.md) | [简体中文](README.md)
+简体中文 | [ENGLISH](README.en.md)
 
 一个功能丰富的图像播放器应用程序，提供流畅的图片浏览体验和多种实用功能。
 ## 运行说明
