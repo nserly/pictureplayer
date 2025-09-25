@@ -5,13 +5,13 @@
 class JOptionPane
 {
 public:
-	// ĞÅÏ¢ÌáÊ¾¿ò
+	// ä¿¡æ¯æç¤ºæ¡†
 	static void showMessage(const std::wstring& message, const std::wstring& title = L"Message");
 
-	// ´íÎóÌáÊ¾¿ò
+	// é”™è¯¯æç¤ºæ¡†
 	static void showError(const std::wstring& message, const std::wstring& title = L"Error");
 
-	// È·ÈÏ¶Ô»°¿ò£¬·µ»Ø true ±íÊ¾¡°ÊÇ¡±£¬false ±íÊ¾¡°·ñ¡±
+	// ç¡®è®¤å¯¹è¯æ¡†ï¼Œè¿”å› true è¡¨ç¤ºâ€œæ˜¯â€ï¼Œfalse è¡¨ç¤ºâ€œå¦â€
 	static bool showConfirm(const std::wstring& message, const std::wstring& title = L"Confirm");
 };
 

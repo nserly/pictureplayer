@@ -60,8 +60,6 @@ public class PictureInformationViewer extends JDialog {
         super.setVisible(visible);
     }
 
-    private static Method $$$cachedGetBundleMethod$$$ = null;
-
     @Setter
     private Frame owner;
 
@@ -180,26 +178,7 @@ public class PictureInformationViewer extends JDialog {
         return fontWithFallback instanceof FontUIResource ? fontWithFallback : new FontUIResource(fontWithFallback);
     }
 
-    /**
-     * Updates the information displayed in the PictureInformationViewer with details from the provided image.
-     *
-     * @param imageHandle the ImageHandle object containing the image path, ImageReader, and ImageInputStream
-     * @throws IOException if an I/O error occurs while processing the image
-     */
-    public synchronized void update(ImageHandle imageHandle) throws IOException {
-        picturePath = imageHandle.path();
-        File file = new File(picturePath);
-        Dimension resolution = GetImageInformation.getImageResolution(imageHandle.imageReader());
-        final ImageDPI DPI = ImageDPIGetter.getImageDPI(imageHandle.path());
-        final int AverageDPI = Math.round((DPI.HorizontalDPI() + DPI.VerticalDPI()) / 2);
-        PictureNameTextField.setText(file.getName());
-        PictureSizeInfoLabel.setText(ComputeFileSize.formatFileSize(ComputeFileSize.computeFileSize(file, 2)));
-        PictureTypeInfoLabel.setText(GetImageInformation.getImageType(imageHandle.imageReader()));
-        PictureResolutionInfoLabel.setText(resolution.width + " x " + resolution.height);
-        PictureDPIInfoLabel.setText(AverageDPI + " dpi");
-        PictureBitDepthInfoLabel.setText(GetImageInformation.getBitDepth(imageHandle.path()) + " bit");
-        PicturePathInfoLabel.setText(file.getAbsolutePath());
-    }
+    private static Method $$$cachedGetBundleMethod$$$ = null;
 
     private String $$$getMessageFromBundle$$$(String path, String key) {
         ResourceBundle bundle;
@@ -248,6 +227,27 @@ public class PictureInformationViewer extends JDialog {
      */
     public JComponent $$$getRootComponent$$$() {
         return MainPanel;
+    }
+
+    /**
+     * Updates the information displayed in the PictureInformationViewer with details from the provided image.
+     *
+     * @param imageHandle the ImageHandle object containing the image path, ImageReader, and ImageInputStream
+     * @throws IOException if an I/O error occurs while processing the image
+     */
+    public synchronized void update(ImageHandle imageHandle) throws IOException {
+        picturePath = imageHandle.path();
+        File file = new File(picturePath);
+        Dimension resolution = GetImageInformation.getImageResolution(imageHandle.imageReader());
+        final ImageDPI DPI = ImageDPIGetter.getImageDPI(imageHandle.path());
+        final int AverageDPI = Math.round((DPI.HorizontalDPI() + DPI.VerticalDPI()) / 2);
+        PictureNameTextField.setText(file.getName());
+        PictureSizeInfoLabel.setText(ComputeFileSize.formatFileSize(ComputeFileSize.computeFileSize(file, 2)));
+        PictureTypeInfoLabel.setText(GetImageInformation.getImageType(imageHandle.imageReader()));
+        PictureResolutionInfoLabel.setText(resolution.width + " x " + resolution.height);
+        PictureDPIInfoLabel.setText(AverageDPI + " dpi");
+        PictureBitDepthInfoLabel.setText(GetImageInformation.getBitDepth(imageHandle.path()) + " bit");
+        PicturePathInfoLabel.setText(file.getAbsolutePath());
     }
 
 }

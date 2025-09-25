@@ -3,7 +3,7 @@
 #include <vector>
 #include <string>
 
-// »ñÈ¡µ±Ç°¿ÉÖ´ĞĞÎÄ¼şËùÔÚÄ¿Â¼
+// è·å–å½“å‰å¯æ‰§è¡Œæ–‡ä»¶æ‰€åœ¨ç›®å½•
 std::wstring getExeDirectory() {
     wchar_t exePath[MAX_PATH];
     GetModuleFileNameW(NULL, exePath, MAX_PATH);
@@ -16,7 +16,7 @@ std::wstring getExeDirectory() {
     return L".";
 }
 
-// »ñÈ¡¿í×Ö·ûÃüÁîĞĞ²ÎÊı
+// è·å–å®½å­—ç¬¦å‘½ä»¤è¡Œå‚æ•°
 std::vector<std::wstring> getRuntimeArgs() {
     LPWSTR* argv = nullptr;
     int argc = 0;

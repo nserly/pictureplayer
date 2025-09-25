@@ -20,7 +20,7 @@ public class JarVersionCleaner {
      * Clean up the old version of the JAR file in the specified folder
      *
      * @param folderPath folder path
-     * If @param isOnlyGetNeedToDeleteFile is true, only the files to be deleted are returned, and no deletion operation is performed
+     *                   If @param isOnlyGetNeedToDeleteFile is true, only the files to be deleted are returned, and no deletion operation is performed
      * @return A collection of file paths to be deleted
      * @throws IOException when IOException accesses folders with errors
      */
@@ -33,7 +33,7 @@ public class JarVersionCleaner {
             throw new IOException("Invalid folder path: " + folderPath);
         }
 
-        File[] jarFiles = folder.listFiles((dir, name) -> name.toLowerCase().endsWith(".jar"));
+        File[] jarFiles = folder.listFiles((_, name) -> name.toLowerCase().endsWith(".jar"));
 
         if (jarFiles == null || jarFiles.length == 0) {
             log.error("The JAR file is not found in the folder.");
@@ -136,15 +136,7 @@ public class JarVersionCleaner {
     /**
      * Internal class that stores JAR file information
      */
-    private static class JarFileInfo {
-        String baseName;
-        String version;
-        File file;
+    private record JarFileInfo(String baseName,String version, File file) {
 
-        JarFileInfo(String baseName, String version, File file) {
-            this.baseName = baseName;
-            this.version = version;
-            this.file = file;
-        }
     }
 }

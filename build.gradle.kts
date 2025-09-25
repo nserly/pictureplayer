@@ -8,7 +8,7 @@ apply(from = "$rootDir/versionsPlugin.gradle")
 plugins {
     `java-library`
     `maven-publish`
-    id("com.github.ben-manes.versions") version "0.52.0"
+    id("com.github.ben-manes.versions") version "0.53.0"
 }
 
 repositories {
