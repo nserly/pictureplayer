@@ -3,6 +3,7 @@ package top.nserly.SoftwareCollections_API.String;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Pattern;
 
 /**
@@ -117,10 +118,10 @@ public class StringFormation {
     /**
      * 改变字符串
      *
-     * @param hashMap 删除information并且添加整个hashMap到information
+     * @param map 删除information并且添加整个hashMap到information
      */
-    public void removeAndAdd(HashMap<String, String> hashMap) {//revalued文本,value改变值
-        if (hashMap != null)
-            information = new HashMap<>(hashMap);
+    public void removeAndAdd(Map<String, String> map) {//revalued文本,value改变值
+        if (map != null)
+            information = new HashMap<>(map);
     }
 }

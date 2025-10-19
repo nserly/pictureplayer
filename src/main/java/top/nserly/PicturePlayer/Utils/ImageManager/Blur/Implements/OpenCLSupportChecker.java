@@ -139,6 +139,7 @@ public class OpenCLSupportChecker {
     }
 
     private static void appendPlatformInfo(StringBuilder info, cl_platform_id platform) {
+        clearBuffer();
         clGetPlatformInfo(platform, CL_PLATFORM_NAME, BUFFER_SIZE, Pointer.to(buffer), null);
         info.append("  Name: ").append(new String(buffer).trim()).append("\n");
         clearBuffer();

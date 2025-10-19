@@ -9,6 +9,7 @@ import lombok.Setter;
 import top.nserly.SoftwareCollections_API.String.StringFormation;
 
 import java.util.HashMap;
+import java.util.Map;
 import java.util.TreeMap;
 
 @Getter
@@ -59,7 +60,7 @@ public class VersionID {
     private HashMap<String, String> SpecialFields;
 
     //还原含有特殊字段的字符串原本的字符串
-    public static String getString(String str, HashMap<String, String> SpecialFields) {
+    public static String getString(String str, Map<String, String> SpecialFields) {
         StringFormation formation = new StringFormation(str);
         formation.removeAndAdd(SpecialFields);
         return formation.getProcessingString();

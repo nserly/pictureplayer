@@ -47,6 +47,7 @@ public class FileDownloader implements Runnable {
     private volatile long remainingTime = -1;
 
     // 文件信息
+    @Getter
     private String sourceUrl;
     private final String saveDirectory;
     // 设置最终文件名（用于分片下载）
