@@ -1188,7 +1188,7 @@ public class GUIStarter extends JFrame {
         }
 
         // 使用Set提高查找效率，并重命名变量以明确含义
-        Set<String> currentPicturePaths = new HashSet<>(picturePath);
+        Set<String> currentPicturePaths = new LinkedHashSet<>(picturePath);
 
         // 存储需要移除和添加的元素，减少同步块内的操作
         List<String> pathsToRemove;
