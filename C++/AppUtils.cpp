@@ -2,8 +2,9 @@
 #include <windows.h>
 #include <vector>
 #include <string>
+#include <shellapi.h>
 
-// è·å–å½“å‰å¯æ‰§è¡Œæ–‡ä»¶æ‰€åœ¨ç›®å½•
+// »ñÈ¡µ±Ç°¿ÉÖ´ĞĞÎÄ¼şËùÔÚÄ¿Â¼
 std::wstring getExeDirectory() {
     wchar_t exePath[MAX_PATH];
     GetModuleFileNameW(NULL, exePath, MAX_PATH);
@@ -16,7 +17,7 @@ std::wstring getExeDirectory() {
     return L".";
 }
 
-// è·å–å®½å­—ç¬¦å‘½ä»¤è¡Œå‚æ•°
+// »ñÈ¡¿í×Ö·ûÃüÁîĞĞ²ÎÊı
 std::vector<std::wstring> getRuntimeArgs() {
     LPWSTR* argv = nullptr;
     int argc = 0;

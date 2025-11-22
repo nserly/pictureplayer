@@ -5,8 +5,8 @@ import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import top.nserly.SoftwareCollections_API.Interaction.SoftwareInteraction.TCP.Interactions;
 
-import java.io.IOException;
 import java.net.Socket;
+import java.util.ArrayList;
 
 @Slf4j
 public final class TCP_Handle extends Interactions {
@@ -14,9 +14,10 @@ public final class TCP_Handle extends Interactions {
     @Getter
     public static WindowsAppMutex windowsAppMutex;
 
-    public TCP_Handle(Socket socket) throws IOException {
-        super(socket);
+    public TCP_Handle(Socket socket, ArrayList<Socket> ClientSockets) {
+        super(socket, ClientSockets);
     }
+
 
     @Override
     public int messageCall() throws Exception {

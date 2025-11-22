@@ -15,6 +15,7 @@
 #include "ConsoleUtils.h"
 #include "JOptionPane.h"
 #include "PropertiesReader.h"
+#include "TcpClient.h"
 
 #pragma comment(lib, "shlwapi.lib")
 

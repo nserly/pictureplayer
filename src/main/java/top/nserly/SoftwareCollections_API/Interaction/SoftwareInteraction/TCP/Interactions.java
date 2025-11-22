@@ -3,9 +3,13 @@ package top.nserly.SoftwareCollections_API.Interaction.SoftwareInteraction.TCP;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
+import top.nserly.SoftwareCollections_API.Handler.Exception.ExceptionHandler;
 import top.nserly.SoftwareCollections_API.String.GetString;
 
+import java.io.IOException;
+import java.lang.reflect.Constructor;
 import java.net.Socket;
+import java.util.ArrayList;
 import java.util.concurrent.*;
 
 /**
@@ -20,9 +24,36 @@ public abstract class Interactions implements Callable<Integer> {
     public ReceviceSoftwareNameInformationAction receviceSoftwareNameInformationAction;
     private long ms;
     private int tryCount = 0;
+    public ArrayList<Socket> ClientSockets = null;
 
-    public Interactions(Socket socket) {
+    public Interactions(Socket socket, ArrayList<Socket> ClientSockets) {
         this.socket = socket;
+        this.ClientSockets = ClientSockets;
+    }
+
+    /**
+     * 通过反射获取Interactions（或其子类）的实例
+     *
+     * @param interactions  目标类的Class对象（必须是Interactions或其子类）
+     * @param socket        构造方法参数1
+     * @param ClientSockets 构造方法参数2
+     * @return 反射创建的实例，若失败返回null
+     */
+    public static Interactions getInstance(Class<? extends Interactions> interactions,
+                                           Socket socket,
+                                           ArrayList<Socket> ClientSockets) {
+        try {
+            Constructor<? extends Interactions> constructor =
+                    interactions.getDeclaredConstructor(Socket.class, ArrayList.class);
+
+            constructor.setAccessible(true);
+
+            return constructor.newInstance(socket, ClientSockets);
+
+        } catch (Exception e) {
+            log.error(ExceptionHandler.getExceptionMessage(e));
+        }
+        return null;
     }
 
     @Override
@@ -34,7 +65,8 @@ public abstract class Interactions implements Callable<Integer> {
             while (true) {
                 if (socket.isClosed() || tryCount >= 3) {
                     log.info("Socket is closed, interaction thread is terminating. (IP: {}, Port: {})", socket.getInetAddress().getHostAddress(), socket.getPort());
-                    return 1; // 返回1表示线程结束
+                    ClientSockets.remove(socket);
+                    throw new IOException("Socket is closed, interaction thread is terminating.");
                 }
 
                 sendMessage = GetString.getString(socket.getInputStream());

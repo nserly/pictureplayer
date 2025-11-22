@@ -4,12 +4,9 @@ package top.nserly.SoftwareCollections_API.Interaction.SoftwareInteraction.TCP.S
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
-import top.nserly.SoftwareCollections_API.Handler.Exception.ExceptionHandler;
 import top.nserly.SoftwareCollections_API.Interaction.SoftwareInteraction.TCP.Interactions;
 
 import java.io.IOException;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
 import java.net.*;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
@@ -32,9 +29,8 @@ public class TCP_ServerSocket {
     @Setter
     protected int MaxConnect;//服务器最大连接数
     @Getter
-    protected int CurrentConnect;//当前连接数
     protected ExecutorService ThreadPool;//线程池
-    protected Constructor<? extends Interactions> handleClient;//处理用户
+    protected Class<? extends Interactions> interactions;
     private WaitForConnectClient waitForConnectClient;//用于管理等待程序
     @Getter
     ArrayList<Socket> ClientSockets;//客户端套接字集合
@@ -85,14 +81,9 @@ public class TCP_ServerSocket {
      * @param interactions 验证成功后和客户端交互
      */
     public TCP_ServerSocket(int port, int MaxConnect, Class<? extends Interactions> interactions) {
-        // 获取Listen类的构造函数
-        try {
-            handleClient = interactions.getConstructor(Socket.class);
-        } catch (NoSuchMethodException e) {
-            log.error(ExceptionHandler.getExceptionMessage(e));
-        }
         this.port = port;
         this.MaxConnect = MaxConnect;
+        this.interactions = interactions;
     }
 
     public static boolean isPortAvailable(int port) {
@@ -179,7 +170,6 @@ public class TCP_ServerSocket {
                     i.close();
                 } catch (IOException ignored) {
                     ClientSockets.remove(i);
-                    CurrentConnect -= 1;
                 }
             }
             try {
@@ -191,7 +181,6 @@ public class TCP_ServerSocket {
 
                 }
                 ClientSockets.remove(i);
-                CurrentConnect -= 1;
             }
         }
     }
@@ -242,7 +231,6 @@ public class TCP_ServerSocket {
     }
 
     public void start() throws IOException {
-        CurrentConnect = 0;
         serverSocket = new ServerSocket(port);
         waitForConnectClient = new WaitForConnectClient(serverSocket, this);
         new Thread(waitForConnectClient).start();
@@ -274,7 +262,7 @@ class WaitForConnectClient implements Runnable {
                 Socket socket = ServerSocket.accept();
                 log.info("new connection request from {}", socket.getInetAddress().getHostAddress());
                 //查看当前连接数是否达到极限
-                if (tcpServerSocket.MaxConnect != -1 && tcpServerSocket.CurrentConnect > tcpServerSocket.MaxConnect) {
+                if (tcpServerSocket.MaxConnect != -1 && tcpServerSocket.ClientSockets.size() > tcpServerSocket.MaxConnect) {
                     socket.close();
                     log.info("connection refused ({}),Caused by:Current Connection counts has been over MaxConnect({})", socket.getInetAddress().getHostAddress(), tcpServerSocket.MaxConnect);
                     continue;
@@ -308,19 +296,15 @@ class WaitForConnectClient implements Runnable {
                     tcpServerSocket.ThreadPool = Executors.newFixedThreadPool(tcpServerSocket.MaxConnect == -1 ? 999 : tcpServerSocket.MaxConnect);
                 }
                 //创建多线程，用来与用户交互
-                tcpServerSocket.ThreadPool.execute(new FutureTask<>(tcpServerSocket.handleClient.newInstance(socket)));
-                tcpServerSocket.CurrentConnect += 1;
+                tcpServerSocket.ThreadPool.execute(new FutureTask<>(Objects.requireNonNull(Interactions.getInstance(tcpServerSocket.interactions, socket, tcpServerSocket.ClientSockets))));
             } catch (IOException e) {
                 if (end) break;
                 for (Socket socket : tcpServerSocket.ClientSockets) {
                     if (socket.isClosed()) {
                         tcpServerSocket.ClientSockets.remove(socket);
                         log.info("Closed socket: {}", socket.getInetAddress().getHostAddress());
-                        tcpServerSocket.CurrentConnect -= 1;
                     }
                 }
-            } catch (InvocationTargetException | IllegalAccessException | InstantiationException e) {
-                tcpServerSocket.CurrentConnect -= 1;
             }
         }
     }

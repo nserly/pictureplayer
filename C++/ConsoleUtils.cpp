@@ -2,7 +2,7 @@
 
 void RedirectIOToConsole()
 {
-    // 鑾峰彇鏍囧噯杈撳嚭鍙ユ焺
+    // 获取标准输出句柄
     HANDLE hStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
     if (hStdOut != INVALID_HANDLE_VALUE) {
         int fd = _open_osfhandle((intptr_t)hStdOut, _O_TEXT);
@@ -15,7 +15,7 @@ void RedirectIOToConsole()
         }
     }
 
-    // 鑾峰彇鏍囧噯閿欒鍙ユ焺
+    // 获取标准错误句柄
     HANDLE hStdErr = GetStdHandle(STD_ERROR_HANDLE);
     if (hStdErr != INVALID_HANDLE_VALUE) {
         int fd = _open_osfhandle((intptr_t)hStdErr, _O_TEXT);

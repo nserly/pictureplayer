@@ -6,15 +6,15 @@
 
 class PropertiesReader {
 public:
-    // æ„é€ å‡½æ•°ï¼ŒåŠ è½½propertiesæ–‡ä»¶
+    // ¹¹Ôìº¯Êı£¬¼ÓÔØpropertiesÎÄ¼ş
     PropertiesReader(const std::wstring& filePath) {
         std::wifstream fin(filePath);
         if (!fin.is_open()) return;
         std::wstring line;
         while (std::getline(fin, line)) {
-            // å»é™¤é¦–å°¾ç©ºç™½
+            // È¥³ıÊ×Î²¿Õ°×
             trim(line);
-            // è·³è¿‡ç©ºè¡Œå’Œæ³¨é‡Š
+            // Ìø¹ı¿ÕĞĞºÍ×¢ÊÍ
             if (line.empty() || line[0] == L'#' || line[0] == L'!') continue;
             size_t pos = line.find(L'=');
             if (pos == std::wstring::npos) continue;
@@ -26,21 +26,21 @@ public:
         }
     }
 
-    // è·å–keyå¯¹åº”çš„valueï¼Œä¸å­˜åœ¨åˆ™è¿”å›ç©ºå­—ç¬¦ä¸²
+    // »ñÈ¡key¶ÔÓ¦µÄvalue£¬²»´æÔÚÔò·µ»Ø¿Õ×Ö·û´®
     std::wstring get(const std::wstring& key) const {
         auto it = properties_.find(key);
         if (it != properties_.end()) return it->second;
         return L"";
     }
 
-    // å­—ç¬¦ä¸²è½¬å¤§å†™
+    // ×Ö·û´®×ª´óĞ´
     static std::wstring toUpper(const std::wstring& str) {
         std::wstring result = str;
         std::transform(result.begin(), result.end(), result.begin(), ::towupper);
         return result;
     }
 
-    // å­—ç¬¦ä¸²è½¬å°å†™
+    // ×Ö·û´®×ªĞ¡Ğ´
     static std::wstring toLower(const std::wstring& str) {
         std::wstring result = str;
         std::transform(result.begin(), result.end(), result.begin(), ::towlower);
@@ -50,7 +50,7 @@ public:
 private:
     std::unordered_map<std::wstring, std::wstring> properties_;
 
-    // å»é™¤é¦–å°¾ç©ºç™½
+    // È¥³ıÊ×Î²¿Õ°×
     static void trim(std::wstring& s) {
         size_t first = s.find_first_not_of(L" \t\r\n");
         size_t last = s.find_last_not_of(L" \t\r\n");

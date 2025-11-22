@@ -1,5 +1,5 @@
 ﻿#include "PicturePlayerRunner.h"
-
+#include "WindowsAppMutex.h"
 
 /**
  * 应用程序入口点
@@ -9,6 +9,28 @@
  * @param nCmdShow 显示窗口的方式
  * @return int 返回值
  */
+
+static std::string wstringToUtf8(const std::wstring& w) {
+    if (w.empty()) return {};
+    int size_needed = ::WideCharToMultiByte(CP_UTF8, 0, w.data(), (int)w.size(), NULL, 0, NULL, NULL);
+    if (size_needed <= 0) return {};
+    std::string str(size_needed, 0);
+    ::WideCharToMultiByte(CP_UTF8, 0, w.data(), (int)w.size(), &str[0], size_needed, NULL, NULL);
+    return str;
+}
+
+// 假设 tcp.sendFilePathToExistingInstance 需要 std::wstring 或 const std::wstring& 参数
+// 你当前传递的是 std::string 类型的 extraPaths，需将其转换为 std::wstring
+
+// 1. 添加 stringToWstring 工具函数
+static std::wstring stringToWstring(const std::string& str) {
+    if (str.empty()) return {};
+    int size_needed = ::MultiByteToWideChar(CP_UTF8, 0, str.data(), (int)str.size(), NULL, 0);
+    if (size_needed <= 0) return {};
+    std::wstring wstr(size_needed, 0);
+    ::MultiByteToWideChar(CP_UTF8, 0, str.data(), (int)str.size(), &wstr[0], size_needed);
+    return wstr;
+}
 
 int WINAPI WinMain(
     _In_ HINSTANCE hInstance,
@@ -33,16 +55,56 @@ int WINAPI WinMain(
     // 优化：只在需要时创建 vmoptions 文件
     EnsureVmOptionsFile(exeDir);
 
-    // 优化：只读取一次配置文件
+    // 先读取运行时参数（后面构建命令和用于 TCP 消息的图片路径）
+    std::vector<std::wstring> arguments = getRuntimeArgs();
+
+    // 读取配置文件（包括 EnableConsole、ConnectPort、ConnectHost）
+    int connectPort = 22357;
+    std::string connectHost = "127.0.0.1";
     std::wstring configPath = exeDir + L"\\StartupConfig.properties";
     if (FileExists(configPath)) {
         PropertiesReader propertiesReader(configPath);
         std::wstring enableConsole = PropertiesReader::toLower(propertiesReader.get(L"EnableConsole"));
         if (enableConsole == L"true") isConsole = true;
+
+        std::wstring portStr = propertiesReader.get(L"ConnectPort");
+        if (!portStr.empty()) {
+            try {
+                connectPort = std::stoi(std::string(portStr.begin(), portStr.end()));
+            }
+            catch (...) {
+                connectPort = 22357;
+            }
+        }
+        std::wstring hostW = propertiesReader.get(L"ConnectHost");
+        if (!hostW.empty()) {
+            connectHost = wstringToUtf8(hostW);
+        }
+    }
+
+    // 构建要发送的图片路径字符串（与 later 拼接命令中添加的文件路径一致）
+    std::string extraPaths;
+    for (size_t i = 1; i < arguments.size(); ++i) {
+        if (PathFileExistsW(arguments[i].c_str())) {
+            if (!extraPaths.empty()) extraPaths += " ";
+            extraPaths += wstringToUtf8(arguments[i]);
+        }
+    }
+
+    // 如果配置了连接端口，先检测并尝试连接发送信息，然后退出程序
+    if (connectPort > 0) {
+        WindowsAppMutex tcp(connectPort); // 默认本地连接，500ms超时
+
+        // 先检查是否有监听者
+        if (!tcp.isFirstInstance()) {
+            tcp.sendSoftwareVisibleDirectiveToExistingInstance(true);
+            tcp.sendFilePathToExistingInstance(extraPaths);
+            tcp.close();
+            return 0;
+        }
     }
 
     // 优化：预分配命令字符串，减少多次扩容
-    std::vector<std::wstring> arguments = getRuntimeArgs();
     std::vector<std::string> vmOptions = ReadVmOptions(exeDir);
     std::wstring baseCommand;
     baseCommand.reserve(256 + vmOptions.size() * 32 + arguments.size() * 64);
