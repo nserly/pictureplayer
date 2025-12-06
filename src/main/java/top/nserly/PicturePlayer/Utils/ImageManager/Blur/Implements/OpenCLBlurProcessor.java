@@ -8,6 +8,9 @@ import top.nserly.SoftwareCollections_API.Handler.Exception.ExceptionHandler;
 
 import java.awt.image.BufferedImage;
 import java.nio.IntBuffer;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -25,6 +28,7 @@ public class OpenCLBlurProcessor implements AutoCloseable {
     private static final ReentrantLock DeviceSelectorLock = new ReentrantLock();
     private static final Thread GetIsSupportedOpenCL = new Thread(() -> {
         isSupportedOpenCL = OpenCLSupportChecker.isOpenCLSupported();
+        // 初始设备计数，后续会在init中更新为实际总设备数
         DeviceCount = OpenCLSupportChecker.getSupported_GPU_Device() > 0 ?
                 OpenCLSupportChecker.getSupported_GPU_Device() :
                 OpenCLSupportChecker.getSupported_CPU_Device();
@@ -47,6 +51,8 @@ public class OpenCLBlurProcessor implements AutoCloseable {
     private static cl_command_queue clCommandQueue = null;
     private static cl_program clProgram = null;
     private static cl_kernel blurKernel = null;
+    // 新增：保存所有平台的设备列表
+    private static final List<cl_device_id> allDevices = new ArrayList<>();
 
     // 实例特定资源
     private cl_mem inputBuffer = null;
@@ -86,7 +92,8 @@ public class OpenCLBlurProcessor implements AutoCloseable {
     public static synchronized boolean setSelectDeviceIndex(int index) {
         DeviceSelectorLock.lock();
         try {
-            index = Math.min(getDeviceCount() - 1, index) > -1 ? index : 0;
+            // 基于所有设备总数进行边界检查
+            index = Math.max(0, Math.min(index, getDeviceCount() - 1));
             if (index == SelectDeviceIndex) return true;
             SelectDeviceIndex = index;
             closeBlurProcessor();
@@ -168,10 +175,7 @@ public class OpenCLBlurProcessor implements AutoCloseable {
                 Thread.currentThread().interrupt();
                 throw new RuntimeException("Interrupted while waiting for OpenCL initialization", e);
             }
-
-            // 注意：这里直接返回，不再重复执行后续逻辑
             return;
-
         }
 
         staticLock.lock();
@@ -183,7 +187,10 @@ public class OpenCLBlurProcessor implements AutoCloseable {
             log.info("Initializing OpenCL static resources...");
             CL.setExceptionsEnabled(true);
 
-            // 获取平台和设备
+            // 重置设备列表
+            allDevices.clear();
+
+            // 获取所有平台
             int[] numPlatforms = new int[1];
             clGetPlatformIDs(0, null, numPlatforms);
             if (numPlatforms[0] == 0) {
@@ -192,32 +199,118 @@ public class OpenCLBlurProcessor implements AutoCloseable {
 
             cl_platform_id[] platforms = new cl_platform_id[numPlatforms[0]];
             clGetPlatformIDs(platforms.length, platforms, null);
-            cl_platform_id platform = platforms[0];
 
-            // 获取设备
-            int[] numDevices = new int[1];
-            clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, 0, null, numDevices);
-            if (numDevices[0] == 0) {
-                log.warn("No GPU devices found, trying CPU");
-                clGetDeviceIDs(platform, CL_DEVICE_TYPE_CPU, 0, null, numDevices);
-                if (numDevices[0] == 0) {
-                    throw new RuntimeException("No OpenCL devices found");
+            // 遍历所有平台收集设备
+            for (cl_platform_id platform : platforms) {
+                // Log platform processing start with platform identifier
+                long platformPtr = getPlatformPointer(platform); // Helper method to get platform pointer/ID
+                log.info("Processing OpenCL platform [Pointer: 0x{}]", Long.toHexString(platformPtr));
+
+                try {
+                    // Log GPU device detection attempt
+                    log.debug("Attempting to detect GPU devices for platform [Pointer: 0x{}]", Long.toHexString(platformPtr));
+
+                    int[] numGpuDevices = new int[1];
+                    clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, 0, null, numGpuDevices);
+
+                    // Log GPU device count detection result
+                    log.debug("GPU device count detected for platform [Pointer: 0x{}]: {}",
+                            Long.toHexString(platformPtr), numGpuDevices[0]);
+
+                    if (numGpuDevices[0] > 0) {
+                        cl_device_id[] gpuDevices = new cl_device_id[numGpuDevices[0]];
+                        clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, gpuDevices.length, gpuDevices, null);
+
+                        // Log successful GPU device collection
+                        log.info("Successfully collected {} GPU device(s) for platform [Pointer: 0x{}]",
+                                gpuDevices.length, Long.toHexString(platformPtr));
+
+                        // Log individual GPU device details
+                        for (int i = 0; i < gpuDevices.length; i++) {
+                            long devicePtr = getDevicePointer(gpuDevices[i]); // Helper method to get device pointer
+                            log.debug("GPU Device {} for platform [Pointer: 0x{}] - Device Pointer: 0x{}",
+                                    (i + 1), Long.toHexString(platformPtr), Long.toHexString(devicePtr));
+                        }
+
+                        Collections.addAll(allDevices, gpuDevices);
+                        log.debug("Added {} GPU device(s) to allDevices collection", gpuDevices.length);
+                        continue;
+                    } else {
+                        log.debug("No GPU devices found for platform [Pointer: 0x{}]", Long.toHexString(platformPtr));
+                    }
+                } catch (Exception e) {
+                    // Log GPU detection failure with exception details
+                    log.warn("Failed to detect GPU devices for platform [Pointer: 0x{}]. Falling back to CPU detection.",
+                            Long.toHexString(platformPtr), e);
+                }
+
+                // Log CPU device detection fallback
+                log.debug("Falling back to CPU device detection for platform [Pointer: 0x{}]",
+                        Long.toHexString(platformPtr));
+
+                int[] numCpuDevices = new int[1];
+                clGetDeviceIDs(platform, CL_DEVICE_TYPE_CPU, 0, null, numCpuDevices);
+
+                // Log CPU device count detection result
+                log.debug("CPU device count detected for platform [Pointer: 0x{}]: {}",
+                        Long.toHexString(platformPtr), numCpuDevices[0]);
+
+                if (numCpuDevices[0] > 0) {
+                    cl_device_id[] cpuDevices = new cl_device_id[numCpuDevices[0]];
+                    clGetDeviceIDs(platform, CL_DEVICE_TYPE_CPU, cpuDevices.length, cpuDevices, null);
+
+                    // Log successful CPU device collection
+                    log.info("Successfully collected {} CPU device(s) for platform [Pointer: 0x{}]",
+                            cpuDevices.length, Long.toHexString(platformPtr));
+
+                    // Log individual CPU device details
+                    for (int i = 0; i < cpuDevices.length; i++) {
+                        long devicePtr = getDevicePointer(cpuDevices[i]);
+                        log.debug("CPU Device {} for platform [Pointer: 0x{}] - Device Pointer: 0x{}",
+                                (i + 1), Long.toHexString(platformPtr), Long.toHexString(devicePtr));
+                    }
+
+                    Collections.addAll(allDevices, cpuDevices);
+                    log.debug("Added {} CPU device(s) to allDevices collection", cpuDevices.length);
+                } else {
+                    log.warn("No CPU devices found for platform [Pointer: 0x{}]. No devices will be added from this platform.",
+                            Long.toHexString(platformPtr));
                 }
             }
 
-            cl_device_id[] devices = new cl_device_id[numDevices[0]];
-            clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, devices.length, devices, null);
-            SelectDeviceIndex = SelectDeviceIndex < devices.length ? SelectDeviceIndex : 0;
-            cl_device_id clDevice = devices[SelectDeviceIndex];
+            // Optional: Log final device collection summary
+            log.info("OpenCL device detection completed. Total devices collected: {}", allDevices.size());
+            if (!allDevices.isEmpty()) {
+                log.debug("Complete list of collected OpenCL devices:");
+                for (int i = 0; i < allDevices.size(); i++) {
+                    long devicePtr = getDevicePointer(allDevices.get(i));
+                    log.debug("Device {} - Pointer: 0x{}", (i + 1), Long.toHexString(devicePtr));
+                }
+            } else {
+                log.error("No OpenCL devices (GPU/CPU) were found across all platforms!");
+            }
+
+            // 检查是否有可用设备
+            if (allDevices.isEmpty()) {
+                throw new RuntimeException("No OpenCL devices found across all platforms");
+            }
+
+            // 更新设备总数
+            DeviceCount = allDevices.size();
+
+            // 验证并调整设备索引
+            SelectDeviceIndex = Math.max(0, Math.min(SelectDeviceIndex, allDevices.size() - 1));
+            cl_device_id selectedDevice = allDevices.get(SelectDeviceIndex);
+            cl_platform_id selectedPlatform = getPlatformFromDevice(selectedDevice);
 
             // 创建上下文
             cl_context_properties contextProperties = new cl_context_properties();
-            contextProperties.addProperty(CL_CONTEXT_PLATFORM, platform);
-            clContext = clCreateContext(contextProperties, 1, new cl_device_id[]{clDevice},
+            contextProperties.addProperty(CL_CONTEXT_PLATFORM, selectedPlatform);
+            clContext = clCreateContext(contextProperties, 1, new cl_device_id[]{selectedDevice},
                     null, null, null);
 
             // 创建命令队列
-            clCommandQueue = clCreateCommandQueueWithProperties(clContext, clDevice,
+            clCommandQueue = clCreateCommandQueueWithProperties(clContext, selectedDevice,
                     new cl_queue_properties(), null);
 
             // 创建和构建程序
@@ -226,11 +319,11 @@ public class OpenCLBlurProcessor implements AutoCloseable {
 
             // 编译并检查错误
             try {
-                clBuildProgram(clProgram, 1, new cl_device_id[]{clDevice}, null, null, null);
+                clBuildProgram(clProgram, 1, new cl_device_id[]{selectedDevice}, null, null, null);
             } catch (CLException e) {
                 // 获取构建日志
                 byte[] buildLog = new byte[8192];
-                clGetProgramBuildInfo(clProgram, clDevice, CL_PROGRAM_BUILD_LOG,
+                clGetProgramBuildInfo(clProgram, selectedDevice, CL_PROGRAM_BUILD_LOG,
                         buildLog.length, Pointer.to(buildLog), null);
                 String logMsg = new String(buildLog).trim();
                 log.error("OpenCL build error: {}", logMsg);
@@ -241,7 +334,7 @@ public class OpenCLBlurProcessor implements AutoCloseable {
             blurKernel = clCreateKernel(clProgram, "gaussianBlur", null);
 
             staticInitialized.set(true);
-            SelectedDevice = getDeviceName(clDevice);
+            SelectedDevice = getDeviceName(selectedDevice);
             log.info("OpenCL static resources initialized successfully with device: {}", SelectedDevice);
 
         } catch (Exception e) {
@@ -256,6 +349,28 @@ public class OpenCLBlurProcessor implements AutoCloseable {
             // 释放所有等待中的线程
             initLatch.countDown();
         }
+    }
+
+    // Helper methods (implement these based on your OpenCL binding implementation)
+    private static long getPlatformPointer(cl_platform_id platform) {
+        // Implementation depends on your OpenCL Java binding (JOCL, Aparapi, etc.)
+        // Example for JOCL: return Pointer.to(platform).getPeerPointer();
+        // If you can't get the pointer, return a hash code as fallback:
+        return platform != null ? platform.hashCode() : 0;
+    }
+
+    private static long getDevicePointer(cl_device_id device) {
+        // Similar implementation to platform pointer
+        return device != null ? device.hashCode() : 0;
+    }
+
+    /**
+     * 从设备获取所属平台
+     */
+    private static cl_platform_id getPlatformFromDevice(cl_device_id device) {
+        cl_platform_id[] platform = new cl_platform_id[1];
+        clGetDeviceInfo(device, CL_DEVICE_PLATFORM, Sizeof.cl_platform_id, Pointer.to(platform), null);
+        return platform[0];
     }
 
     /**
@@ -283,6 +398,7 @@ public class OpenCLBlurProcessor implements AutoCloseable {
      */
     private static void releaseStaticResources() {
         SelectedDevice = null;
+        allDevices.clear();
         if (blurKernel != null) {
             try {
                 clReleaseKernel(blurKernel);

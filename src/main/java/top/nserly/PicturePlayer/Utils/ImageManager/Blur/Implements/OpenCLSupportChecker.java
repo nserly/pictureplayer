@@ -13,21 +13,25 @@ import static org.jocl.CL.*;
 @Slf4j
 public class OpenCLSupportChecker {
 
-    private static final int BUFFER_SIZE = 128;
+    private static final int BUFFER_SIZE = 1024; // 扩大缓冲区避免设备名称截断
     private static final byte[] buffer = new byte[BUFFER_SIZE];
     private static final ArrayList<String> Supported_GPU_Device_Name_List = new ArrayList<>();
     private static final ArrayList<String> Supported_CPU_Device_Name_List = new ArrayList<>();
     @Getter
-    private static int Supported_GPU_Device;
+    private static int Supported_GPU_Device = 0; // 初始化为0，用于累加
     @Getter
-    private static int Supported_CPU_Device;
+    private static int Supported_CPU_Device = 0; // 初始化为0，用于累加
 
     /**
-     * 检查系统是否支持OpenCL
+     * 检查系统是否支持OpenCL，同时收集所有平台的设备信息
      */
     public static boolean isOpenCLSupported() {
+        // 每次检查前清空历史数据
         Supported_GPU_Device_Name_List.clear();
         Supported_CPU_Device_Name_List.clear();
+        Supported_GPU_Device = 0;
+        Supported_CPU_Device = 0;
+
         try {
             CL.setExceptionsEnabled(true);
 
@@ -41,16 +45,23 @@ public class OpenCLSupportChecker {
             cl_platform_id[] platforms = new cl_platform_id[numPlatforms[0]];
             clGetPlatformIDs(platforms.length, platforms, null);
 
+            boolean hasSupportedDevice = false;
+            // 遍历所有平台，确保收集全部设备信息
             for (cl_platform_id platform : platforms) {
-                if (checkDeviceType(platform, CL_DEVICE_TYPE_GPU) || checkDeviceType(platform, CL_DEVICE_TYPE_CPU)) {
-                    return true;
+                boolean platformHasGPU = checkDeviceType(platform, CL_DEVICE_TYPE_GPU);
+                boolean platformHasCPU = checkDeviceType(platform, CL_DEVICE_TYPE_CPU);
+                if (platformHasGPU || platformHasCPU) {
+                    hasSupportedDevice = true;
                 }
             }
 
-            log.info("No OpenCL devices found on any platform");
-            return false;
+            if (!hasSupportedDevice) {
+                log.info("No OpenCL devices (GPU/CPU) found on any platform");
+            }
+            return hasSupportedDevice;
+
         } catch (Exception e) {
-            log.info("OpenCL not supported: {}", e.getMessage());
+            log.error("OpenCL check failed: {}", e.getMessage());
             return false;
         } finally {
             CL.setExceptionsEnabled(false);
@@ -58,50 +69,70 @@ public class OpenCLSupportChecker {
     }
 
     public static List<String> getSupported_GPU_Device_Name_List() {
-        return Supported_GPU_Device_Name_List.stream().toList();
+        return new ArrayList<>(Supported_GPU_Device_Name_List); // 返回不可修改的副本
     }
 
     public static List<String> getSupported_CPU_Device_Name_List() {
-        return Supported_CPU_Device_Name_List.stream().toList();
+        return new ArrayList<>(Supported_CPU_Device_Name_List); // 返回不可修改的副本
     }
 
+    public static List<String> getSupported_Device_Name() {
+        if (!Supported_GPU_Device_Name_List.isEmpty())
+            return getSupported_GPU_Device_Name_List();
+        return getSupported_CPU_Device_Name_List();
+    }
+
+    /**
+     * 检查指定平台上的指定类型设备，并累加设备计数
+     */
     private static boolean checkDeviceType(cl_platform_id platform, long deviceType) {
         try {
             int[] numDevices = new int[1];
             clGetDeviceIDs(platform, deviceType, 0, null, numDevices);
-            if (numDevices[0] > 0) {
-                cl_device_id[] devices = new cl_device_id[numDevices[0]];
-                clGetDeviceIDs(platform, deviceType, devices.length, devices, null);
-
-                for (cl_device_id device : devices) {
-                    clearBuffer();
-                    clGetDeviceInfo(device, CL_DEVICE_NAME, BUFFER_SIZE, Pointer.to(buffer), null);
-                    String deviceName = new String(buffer).trim();
-                    if (deviceType == CL_DEVICE_TYPE_GPU) {
-                        Supported_GPU_Device_Name_List.add(deviceName);
-                    } else if (deviceType == CL_DEVICE_TYPE_CPU) {
-                        Supported_CPU_Device_Name_List.add(deviceName);
-                    }
-                }
-
-                if (deviceType == CL_DEVICE_TYPE_GPU) {
-                    Supported_GPU_Device = numDevices[0];
-                } else if (deviceType == CL_DEVICE_TYPE_CPU) {
-                    Supported_CPU_Device = numDevices[0];
-                }
-
-                log.info("Found OpenCL {} device on platform", deviceType == CL_DEVICE_TYPE_GPU ? "GPU" : "CPU");
-                return true;
+            if (numDevices[0] <= 0) {
+                return false;
             }
+
+            cl_device_id[] devices = new cl_device_id[numDevices[0]];
+            clGetDeviceIDs(platform, deviceType, devices.length, devices, null);
+
+            for (cl_device_id device : devices) {
+                clearBuffer();
+                clGetDeviceInfo(device, CL_DEVICE_NAME, BUFFER_SIZE, Pointer.to(buffer), null);
+                String deviceName = new String(buffer).trim();
+                if (deviceType == CL_DEVICE_TYPE_GPU) {
+                    Supported_GPU_Device_Name_List.add(deviceName);
+                } else if (deviceType == CL_DEVICE_TYPE_CPU) {
+                    Supported_CPU_Device_Name_List.add(deviceName);
+                }
+                log.debug("Found {} device: {}",
+                        deviceType == CL_DEVICE_TYPE_GPU ? "GPU" : "CPU",
+                        deviceName);
+            }
+
+            // 累加设备数量（核心修复点）
+            if (deviceType == CL_DEVICE_TYPE_GPU) {
+                Supported_GPU_Device += numDevices[0];
+            } else if (deviceType == CL_DEVICE_TYPE_CPU) {
+                Supported_CPU_Device += numDevices[0];
+            }
+
+            log.info("Found {} {} devices on platform",
+                    numDevices[0],
+                    deviceType == CL_DEVICE_TYPE_GPU ? "GPU" : "CPU");
+            return true;
+
         } catch (CLException e) {
-            // 忽略错误，继续检查下一个设备类型
+            log.warn("Failed to check {} devices on platform (error code: {}): {}",
+                    deviceType == CL_DEVICE_TYPE_GPU ? "GPU" : "CPU",
+                    e.getStatus(),
+                    e.getMessage());
+            return false;
         }
-        return false;
     }
 
-
     /**
-     * 获取OpenCL平台和设备信息
+     * 获取OpenCL平台和设备的详细信息
      */
     public static String getOpenCLInfo() {
         StringBuilder info = new StringBuilder();
@@ -127,6 +158,7 @@ public class OpenCLSupportChecker {
             }
 
             return info.toString();
+
         } catch (Exception e) {
             return "Error getting OpenCL info: " + e.getMessage();
         } finally {
@@ -142,17 +174,15 @@ public class OpenCLSupportChecker {
         clearBuffer();
         clGetPlatformInfo(platform, CL_PLATFORM_NAME, BUFFER_SIZE, Pointer.to(buffer), null);
         info.append("  Name: ").append(new String(buffer).trim()).append("\n");
-        clearBuffer();
 
+        clearBuffer();
         clGetPlatformInfo(platform, CL_PLATFORM_VENDOR, BUFFER_SIZE, Pointer.to(buffer), null);
         info.append("  Vendor: ").append(new String(buffer).trim()).append("\n");
-        clearBuffer();
 
+        clearBuffer();
         clGetPlatformInfo(platform, CL_PLATFORM_VERSION, BUFFER_SIZE, Pointer.to(buffer), null);
         info.append("  Version: ").append(new String(buffer).trim()).append("\n");
-        clearBuffer();
     }
-
 
     private static void appendDeviceInfo(StringBuilder info, cl_platform_id platform, long deviceType, String deviceTypeName) {
         int[] numDevices = new int[1];
@@ -164,13 +194,13 @@ public class OpenCLSupportChecker {
 
                 info.append("  ").append(deviceTypeName).append(": ").append(numDevices[0]).append("\n");
                 for (cl_device_id device : devices) {
+                    clearBuffer();
                     clGetDeviceInfo(device, CL_DEVICE_NAME, BUFFER_SIZE, Pointer.to(buffer), null);
                     info.append("    ").append(new String(buffer).trim()).append("\n");
-                    clearBuffer();
                 }
             }
         } catch (CLException e) {
-            // 忽略错误
+            info.append("  ").append(deviceTypeName).append(": Error checking devices (code: ").append(e.getStatus()).append(")\n");
         }
     }
 }

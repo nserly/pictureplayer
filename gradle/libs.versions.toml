@@ -2,7 +2,7 @@
 # https://docs.gradle.org/current/userguide/platforms.html#sub::toml-dependencies-format
 
 [versions]
-com-formdev-flatlaf = "3.6.2"
+com-formdev-flatlaf = "3.7"
 com-github-adedayo-intellij-sdk-forms-rt = "142.1"
 com-github-oshi-oshi-core = "6.9.1"
 com-google-code-gson-gson = "2.13.2"

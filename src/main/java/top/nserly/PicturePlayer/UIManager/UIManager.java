@@ -20,7 +20,7 @@ public abstract class UIManager {
     public static final int DarkTheme = 1;
     public static final int LightTheme = 2;
     @Getter
-    private static final UIManager INSTANCE = createInstance();
+    private static final UIManager UIManager = createInstance();
     //设置主题（可设值：0，1，2）
     @Getter
     private int Theme = 0;//当前主题：0：跟随系统 1：Dark主题 2：Light主题
@@ -74,10 +74,6 @@ public abstract class UIManager {
                 }
             }
         });
-    }
-
-    public static UIManager getUIManager() {
-        return INSTANCE;
     }
 
     // 获取当前已应用的主题信息

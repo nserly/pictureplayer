@@ -30,4 +30,7 @@ public @interface DefaultArgs {
 
     //关闭主窗口时的控制方式（0:显示退出确定窗口 1:直接退出 2:最小化到系统托盘）
     int CloseMainFrameControl() default 0;
+
+    //OpenCL设备选择索引
+    int OpenCLDeviceIndex() default 0;
 }
