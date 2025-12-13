@@ -5,6 +5,7 @@
  */
 
 apply(from = "$rootDir/versionsPlugin.gradle")
+
 plugins {
     `java-library`
     `maven-publish`
@@ -12,7 +13,9 @@ plugins {
 }
 
 repositories {
-    mavenLocal()
+//    mavenLocal()
+    mavenCentral()
+    gradlePluginPortal()
     maven {
         url = uri("https://repo.maven.apache.org/maven2/")
     }
