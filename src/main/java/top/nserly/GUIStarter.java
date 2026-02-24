@@ -163,7 +163,7 @@ public class GUIStarter extends JFrame {
         }).start();
     });
 
-    public static final Image SOFTWARE_FRAME_ICON = SystemNotifications.DefaultIcon.getImage();
+    public static final Image SOFTWARE_FRAME_ICON;
 
     @Getter
     private final TreeMap<String, ThumbnailPreviewOfImage> thumbnailPreviewOfImages = new TreeMap<>();
@@ -198,7 +198,7 @@ public class GUIStarter extends JFrame {
 
 
                 try {
-                    if (!downloadUpdate.checkIfTheLatestVersion()) {
+                    if (SystemNotifications.isSupportedSystemNotifications && !downloadUpdate.checkIfTheLatestVersion()) {
                         SystemNotifications.sendMessage(SystemNotifications.DefaultIcon,
                                 Bundle.getMessage("NoAnyUpdate_Title"),
                                 Bundle.getMessage("NoAnyUpdate_Content_First"),
@@ -547,6 +547,9 @@ public class GUIStarter extends JFrame {
 
     private static Method $$$cachedGetBundleMethod$$$ = null;
 
+    /**
+     * @noinspection ALL
+     */
     private String $$$getMessageFromBundle$$$(String path, String key) {
         ResourceBundle bundle;
         try {
@@ -630,6 +633,7 @@ public class GUIStarter extends JFrame {
         }
 
         ExceptionHandler.setUncaughtExceptionHandler(log);
+        SOFTWARE_FRAME_ICON = SystemNotifications.bufferedImage;
         //初始化Init
         new Thread(Init::init).start();
         init.setUpdate(true);
@@ -644,10 +648,11 @@ public class GUIStarter extends JFrame {
         stringFormation_title.add("version", PicturePlayerVersion.getVersion());
         stringFormation_title.add("version", downloadUpdate.NewVersionName);
         stringFormation_title.add("versionID", String.valueOf(downloadUpdate.NewVersionID));
-        SystemNotifications.sendMessage(SystemNotifications.DefaultIcon,
-                stringFormation_title.getProcessingString(),
-                Bundle.getMessage("SystemTrayMenu_FindNewVersionContent"),
-                TrayIcon.MessageType.INFO);
+        if (SystemNotifications.isSupportedSystemNotifications)
+            SystemNotifications.sendMessage(SystemNotifications.DefaultIcon,
+                    stringFormation_title.getProcessingString(),
+                    Bundle.getMessage("SystemTrayMenu_FindNewVersionContent"),
+                    TrayIcon.MessageType.INFO);
         ConfirmUpdateDialog confirmUpdateDialog = new ConfirmUpdateDialog(downloadUpdate);
         confirmUpdateDialog.pack();
         confirmUpdateDialog.setVisible(true);
@@ -847,7 +852,7 @@ public class GUIStarter extends JFrame {
     }
 
     public static void initSystemTray() {
-        if (systemTray != null) return;
+        if (systemTray != null || !SystemNotifications.isSupportedSystemNotifications) return;
         systemTray = SystemNotifications.getSystemTray(SystemNotifications.DefaultIcon, SystemTrayMenuItems, e -> {
             if (e.getClickCount() == 2) {
                 GUIStarter.main.setVisible(true);
@@ -878,7 +883,7 @@ public class GUIStarter extends JFrame {
                             .append("\nOpened: ")
                             .append(PaintPicturePanel.paintPicture.imageCanvas.getPath());
 
-                if (lastToolTip == null || !lastToolTip.contentEquals(ToolTipText))
+                if (SystemNotifications.isSupportedSystemNotifications && (lastToolTip == null || !lastToolTip.contentEquals(ToolTipText)))
                     SystemNotifications.DefaultIcon.setToolTip(ToolTipText.toString());
 
                 lastToolTip = ToolTipText.toString();
@@ -899,7 +904,7 @@ public class GUIStarter extends JFrame {
         }
 
         // 移除系统托盘
-        if (systemTray != null) {
+        if (systemTray != null && SystemNotifications.isSupportedSystemNotifications) {
             try {
                 systemTray.remove(SystemNotifications.DefaultIcon);
             } catch (Exception e) {

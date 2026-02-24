@@ -25,8 +25,8 @@ java -cp "PicturePlayer.jar;lib/*" Runner.Main -XX:+UseG1GC
 
 ## System Requirements
 
-- Only supports Windows 10 version 2004 and above, Linux operating system.
-- Requires JRE 25 runtime environment
+- Only supports Windows 10 version 22H2 and above, Linux operating system.
+- Requires Java 25 or later runtime environment
 - OpenCL-capable GPU device (optional)
 
 ## Installation Instructions

@@ -1,3 +1,11 @@
 Manifest-Version: 1.0
 Main-Class: top.nserly.GUIStarter
+Class-Path: jna-platform-5.18.1.jar jna-5.18.1.jar oshi-core-6.9.3.jar i
+ mageio-jpeg-3.13.0.jar thumbnailator-0.4.21.jar imageio-metadata-3.13.0
+ .jar error_prone_annotations-2.41.0.jar common-io-3.13.0.jar common-lan
+ g-3.13.0.jar flatlaf-extras-3.7.jar log4j-api-2.25.3.jar imageio-core-3
+ .13.0.jar forms_rt-142.1.jar log4j-core-2.25.3.jar log4j-slf4j2-impl-2.
+ 25.3.jar imageio-tiff-3.13.0.jar jsvg-2.0.0.jar jocl-2.0.6.jar slf4j-ap
+ i-2.0.17.jar gson-2.13.2.jar imageio-webp-3.13.0.jar flatlaf-3.7.jar co
+ mmon-image-3.13.0.jar
 

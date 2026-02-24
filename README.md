@@ -23,8 +23,8 @@ java -cp "PicturePlayer.jar;lib/*" top.nserly.GUIStarter -XX:+UseG1GC
 
 ## 系统要求
 
-- 仅支持Windows 10 2004及以上版本，Linux操作系统
-- 需要JVM 25运行环境
+- 仅支持Windows 10 22H2及以上版本，Linux操作系统
+- 需要Java 25及以上运行环境
 - 支持OpenCL的GPU设备（可选）
 
 ## 安装说明

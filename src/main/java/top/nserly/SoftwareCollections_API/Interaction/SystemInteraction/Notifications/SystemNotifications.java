@@ -19,12 +19,14 @@ public class SystemNotifications {
     public static final boolean isSupportedSystemNotifications;
     public static TrayIcon DefaultIcon;
     public static int createdSystemTrayCount;
+    public static BufferedImage bufferedImage;
 
     static {
         isSupportedSystemNotifications = SystemTray.isSupported();
         try {
-            BufferedImage bufferedImage = ImageIO.read(Objects.requireNonNull(GUIStarter.class.getResource("tray.png")));
-            DefaultIcon = new TrayIcon(bufferedImage);
+            bufferedImage = ImageIO.read(Objects.requireNonNull(GUIStarter.class.getResource("tray.png")));
+            if (isSupportedSystemNotifications)
+                DefaultIcon = new TrayIcon(bufferedImage);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
