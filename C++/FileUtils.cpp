@@ -1,13 +1,29 @@
+/*
+ * Copyright 2026 PicturePlayer;Nserly
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 #include "FileUtils.h"
 #include <shlwapi.h>
 #include <fstream>
 
-// ¼ì²éÎÄ¼şÊÇ·ñ´æÔÚ
+// æ£€æŸ¥æ–‡ä»¶æ˜¯å¦å­˜åœ¨
 bool FileExists(const std::wstring& filePath) {
     return PathFileExistsW(filePath.c_str()) != 0;
 }
 
-// »ñÈ¡ÎÄ¼şÄÚÈİ
+// è·å–æ–‡ä»¶å†…å®¹
 std::string getFileContent(const std::wstring& filePath) {
     FILE* file = nullptr;
     if (_wfopen_s(&file, filePath.c_str(), L"rb") != 0 || !file) {
@@ -25,7 +41,7 @@ std::string getFileContent(const std::wstring& filePath) {
     return content;
 }
 
-// ¼ì²é²¢´´½¨ PicturePlayer.vmoptions ÎÄ¼ş
+// æ£€æŸ¥å¹¶åˆ›å»º PicturePlayer.vmoptions æ–‡ä»¶
 void EnsureVmOptionsFile(const std::wstring& exeDir) {
     std::wstring vmOptionsPath = exeDir + L"\\PicturePlayer.vmoptions";
     if (!FileExists(vmOptionsPath)) {
@@ -44,7 +60,7 @@ void EnsureVmOptionsFile(const std::wstring& exeDir) {
     }
 }
 
-// ¶ÁÈ¡ vmoptions ÎÄ¼şÄÚÈİ£¬·µ»ØÃ¿Ò»ĞĞ
+// è¯»å– vmoptions æ–‡ä»¶å†…å®¹ï¼Œè¿”å›æ¯ä¸€è¡Œ
 std::vector<std::string> ReadVmOptions(const std::wstring& exeDir) {
     std::vector<std::string> options;
     std::wstring vmOptionsPath = exeDir + L"\\PicturePlayer.vmoptions";
@@ -63,7 +79,7 @@ std::vector<std::string> ReadVmOptions(const std::wstring& exeDir) {
 
 
 bool isJavaInstalled() {
-    // ³¢ÊÔÔËĞĞ "java -version" ²¢¼ì²é·µ»ØÖµ
+    // å°è¯•è¿è¡Œ "java -version" å¹¶æ£€æŸ¥è¿”å›å€¼
     STARTUPINFO si = { sizeof(si) };
     PROCESS_INFORMATION pi;
     wchar_t cmd[] = L"java -version";
@@ -82,12 +98,12 @@ bool isJavaInstalled() {
     if (!success) {
         return false;
     }
-    // µÈ´ı½ø³Ì½áÊø
+    // ç­‰å¾…è¿›ç¨‹ç»“æŸ
     WaitForSingleObject(pi.hProcess, 3000);
     DWORD exitCode = 0;
     GetExitCodeProcess(pi.hProcess, &exitCode);
     CloseHandle(pi.hProcess);
     CloseHandle(pi.hThread);
-    // java -version Í¨³£·µ»Ø0»ò·Ç0¶¼´ú±íÒÑ°²×°£¬Ö»ÒªÄÜÆô¶¯¼´¿É
+    // java -version é€šå¸¸è¿”å›0æˆ–é0éƒ½ä»£è¡¨å·²å®‰è£…ï¼Œåªè¦èƒ½å¯åŠ¨å³å¯
     return true;
 }
